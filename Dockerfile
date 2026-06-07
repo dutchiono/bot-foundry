@@ -9,7 +9,7 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY src/ ./src/
-RUN npm run build
+RUN npx tsc
 
 FROM node:22-alpine AS runner
 WORKDIR /app
