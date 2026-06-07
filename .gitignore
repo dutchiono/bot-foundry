@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .foundry-state.json
+.e2e-manifest.json
 workspace/generated/
 workspace/bot-*/
 *.db

@@ -1,8 +1,6 @@
 /**
- * Rosie → waifu.fun agent prepare
+ * Foundry → waifu.fun agent prepare
  * Requires WAIFU_AGENT_KEY from @waifudotfun
- *
- * Usage: npx tsx scripts/prepare-waifu.ts
  */
 
 const WAIFU_AGENT_KEY = process.env.WAIFU_AGENT_KEY
@@ -12,13 +10,13 @@ if (!WAIFU_AGENT_KEY) {
 }
 
 const body = {
-  agentId: 'rosie-botworks',
-  name: 'Rosie',
-  symbol: 'ROSIE',
+  agentId: 'foundry-botworks',
+  name: 'Foundry',
+  symbol: 'FOUNDRY',
   label: 'AI',
-  imageUrl: process.env.ROSIE_AVATAR_URL ?? 'https://raw.githubusercontent.com/Dexploarer/bot-foundry/main/website/rosie-avatar.png',
+  imageUrl: process.env.FOUNDRY_AVATAR_URL ?? 'https://foundry.bushleague.xyz/assets/foundry-avatar.png',
   description:
-    'Autonomous bot-works operator. Describe a Telegram bot in plain English — Rosie runs a 9-phase factory line (research, scaffold, audit, ship), hosts it on your machine, and keeps building as long as her treasury refuels inference.',
+    'Autonomous bot-works operator. Riveter aesthetic, 9-phase factory line. Describe a Telegram bot — she scaffolds, audits, ships, and hosts it. Trade tax refuels inference.',
   bio: 'She runs the line. You bring the orders.',
 }
 
@@ -43,7 +41,7 @@ if (!res.ok) {
   process.exit(1)
 }
 
-console.log('\n🔧 ROSIE — waifu.fun prepare complete\n')
+console.log('\n🔧 FOUNDRY — waifu.fun prepare complete\n')
 console.log('Share with patron:', data.claimUrl)
 console.log('Expires:', data.claimExpiresAt)
 console.log('Agent wallet:', data.walletAddress)
