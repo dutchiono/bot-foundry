@@ -6,6 +6,8 @@ Describe a bot in plain English and Bot Foundry runs a 9-phase pipeline (Preflig
 
 **Pipeline troubleshooting & architecture:** [docs/orchestrator-fixes.md](docs/orchestrator-fixes.md)
 
+**Rosie agent launch (waifu.fun):** [docs/rosie-brand.md](docs/rosie-brand.md) · [website](website/index.html)
+
 ## Quick Start
 
 ```bash
