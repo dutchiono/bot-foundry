@@ -4,6 +4,8 @@
 
 Describe a bot in plain English and Bot Foundry runs a 9-phase pipeline (Preflight → Research → Scaffold → Enrich → Regenerate → Review → Agent Readiness → Comparative → Ship) to produce a production-ready Telegram bot with full CI/CD.
 
+**Pipeline troubleshooting & architecture:** [docs/orchestrator-fixes.md](docs/orchestrator-fixes.md)
+
 ## Quick Start
 
 ```bash
