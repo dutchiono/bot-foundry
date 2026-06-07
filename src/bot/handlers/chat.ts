@@ -1,11 +1,74 @@
 import type { BotFoundryContext } from '../types.js'
-import type { UserSession } from '../../types/index.js'
+import type { BotDefinition, UserSession } from '../../types/index.js'
 import { getUserSession, updateUserSession } from '../types.js'
 import type { PipelineOrchestrator } from '../../pipeline/orchestrator.js'
 import type { OpenCodeClient } from '../../opencode/client.js'
 import { getBot, updateBot, createBotDefinition } from '../types.js'
 import { getContext } from '../../opencode/session.js'
 import { extractJsonFromParts } from '../../opencode/utils.js'
+import { escapeMarkdown, formatPipelineProgress } from '../format.js'
+import { deployGuide, isLocalHostTarget, parseDeployChoice } from '../deploy-guides.js'
+import { findLatestWorkspaceDir } from './deploy.js'
+import { isBotToken, startLocalBot } from '../../deploy/runner.js'
+
+async function setupTelegramProgress(
+  ctx: BotFoundryContext,
+  userSession: UserSession,
+  bot: BotDefinition,
+  orchestrator: PipelineOrchestrator,
+  initialLine: string,
+  options?: { newMessage?: boolean },
+): Promise<void> {
+  const chatId = ctx.chat?.id
+  if (!chatId) return
+
+  const state = userSession.pipelineRunId
+    ? orchestrator.getState(userSession.pipelineRunId)
+    : undefined
+
+  const forceNew = options?.newMessage === true
+  let messageId = forceNew ? undefined : userSession.progressMessageId
+
+  if (!messageId) {
+    const statusMsg = await ctx.reply(
+      formatPipelineProgress(bot, state, initialLine),
+      { parse_mode: 'Markdown' },
+    )
+    messageId = statusMsg.message_id
+    updateUserSession(userSession.telegramId, {
+      progressChatId: chatId,
+      progressMessageId: messageId,
+    })
+  } else {
+    await ctx.telegram
+      .editMessageText(
+        chatId,
+        messageId,
+        undefined,
+        formatPipelineProgress(bot, state, initialLine),
+        { parse_mode: 'Markdown' },
+      )
+      .catch(() => {})
+  }
+
+  orchestrator.unregisterProgressSink(bot.id)
+  orchestrator.registerProgressSink(bot.id, async (message) => {
+    const currentState = userSession.pipelineRunId
+      ? orchestrator.getState(userSession.pipelineRunId)
+      : undefined
+    const text = formatPipelineProgress(bot, currentState, message)
+    const targetChat = userSession.progressChatId ?? chatId
+    const targetMsg = userSession.progressMessageId ?? messageId
+    await ctx.telegram
+      .editMessageText(targetChat, targetMsg, undefined, text, { parse_mode: 'Markdown' })
+      .catch((err: unknown) => {
+        const detail = err instanceof Error ? err.message : String(err)
+        if (!detail.includes('message is not modified')) {
+          console.error('[telegram-progress]', detail)
+        }
+      })
+  })
+}
 
 export function registerChatHandler(
   getOrchestrator: () => PipelineOrchestrator,
@@ -14,41 +77,100 @@ export function registerChatHandler(
   return async (ctx: BotFoundryContext) => {
     const telegramId = ctx.from?.id
     if (!telegramId) return
-    const text = ctx.message && 'text' in ctx.message ? ctx.message.text : ''
-    if (!text || text.startsWith('/')) return
+    const rawText = ctx.message && 'text' in ctx.message ? ctx.message.text : ''
+    if (!rawText) return
+    // Allow /windows style replies for deploy
+    const text = rawText.startsWith('/') && !rawText.match(/^\/(newbot|deploy|status|opencode|help|start)\b/)
+      ? rawText.slice(1)
+      : rawText
+    if (text.startsWith('/')) return
 
     const userSession = getUserSession(telegramId)
+
+    // Start hosted bot when user pastes @BotFather token
+    if (userSession.awaitingChildBotToken) {
+      const ws = userSession.workspaceDir ?? findLatestWorkspaceDir()
+      if (!ws) {
+        await ctx.reply('No workspace found. Run /newbot first.')
+        return
+      }
+      if (!isBotToken(text)) {
+        await ctx.reply(
+          'That does not look like a bot token.\n\nPaste the full token from @BotFather (format: `123456789:AAH...`).',
+          { parse_mode: 'Markdown' },
+        )
+        return
+      }
+      await ctx.reply('⏳ Installing deps and starting your bot on this machine...')
+      const result = await startLocalBot(ws, text.trim())
+      updateUserSession(telegramId, { awaitingChildBotToken: false })
+      if (userSession.activeBotId) {
+        updateBot(userSession.activeBotId, { status: 'deployed' })
+      }
+      await ctx.reply(result.message)
+      return
+    }
+
+    // Deploy platform choice (including after session recovery)
+    if (userSession.awaitingDeployChoice || userSession.phase === 9) {
+      const deployTarget = parseDeployChoice(text)
+      if (deployTarget) {
+        const bot = userSession.activeBotId ? getBot(userSession.activeBotId) : undefined
+        const ws = userSession.workspaceDir
+          ?? getContext(telegramId)?.workspaceDir
+          ?? findLatestWorkspaceDir()
+          ?? 'workspace/bot-???'
+        const botName = bot?.name ?? ws.split('/').pop() ?? 'your-bot'
+        await ctx.reply(deployGuide(deployTarget, ws, botName), { parse_mode: 'Markdown' })
+        updateUserSession(telegramId, {
+          awaitingDeployChoice: false,
+          workspaceDir: ws,
+          ...(isLocalHostTarget(deployTarget)
+            ? { awaitingChildBotToken: true }
+            : {}),
+        })
+        if (isLocalHostTarget(deployTarget)) {
+          await ctx.reply(
+            '👇 *Paste your new bot token* from @BotFather below and I\'ll start it on this PC.',
+            { parse_mode: 'Markdown' },
+          )
+        }
+        return
+      }
+      if (userSession.awaitingDeployChoice || userSession.phase === 9) {
+        await ctx.reply(
+          'Send a deploy option: `1` Windows, `2` macOS, `3` Linux, `4` Docker — or type e.g. `windows`.',
+          { parse_mode: 'Markdown' },
+        )
+        return
+      }
+    }
 
     // Handle pipeline await_input state
     if (userSession.pipelineRunId && userSession.phase >= 0) {
       const state = getOrchestrator().getState(userSession.pipelineRunId)
       if (state?.status === 'awaiting_input') {
-        await ctx.reply('🔄 Processing your input...')
-
         const bot = getBot(userSession.activeBotId!)
+        const orchestrator = getOrchestrator()
         if (bot) {
-          await getOrchestrator().handleUserInput(
+          await setupTelegramProgress(
+            ctx,
+            userSession,
+            bot,
+            orchestrator,
+            `Applying your input: "${text.slice(0, 80)}${text.length > 80 ? '…' : ''}"`,
+            { newMessage: true },
+          )
+          await orchestrator.handleUserInput(
             userSession.pipelineRunId,
             text,
             bot,
             userSession,
           )
+          checkPipelineProgress(ctx, userSession, orchestrator, () => {
+            orchestrator.unregisterProgressSink(bot.id)
+          })
         }
-        return
-      }
-    }
-
-    // Handle deployment option selection
-    if (userSession.phase === 9) {
-      const bot = getBot(userSession.activeBotId!)
-      if (bot && ['1', '2', '3', '4'].includes(text.trim())) {
-        const methods: Record<string, string> = {
-          '1': 'docker',
-          '2': 'fly',
-          '3': 'railway',
-          '4': 'self-hosted',
-        }
-        await ctx.reply(`Deploying via ${methods[text.trim()]}... This feature is under construction.`)
         return
       }
     }
@@ -64,8 +186,11 @@ export function registerChatHandler(
         return
       }
 
-      const parseSession = await oc.createSession('Parsing bot idea')
-      const result = await oc.sendPrompt(parseSession.id,
+      let parseSession
+      let result
+      try {
+        parseSession = await oc.createSession('Parsing bot idea')
+        result = await oc.sendPrompt(parseSession.id,
         `Parse this bot description into a structured specification:
 
 "${text}"
@@ -97,8 +222,16 @@ Respond JSON only.`,
           },
         },
       )
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[parse-bot-idea]', msg)
+        await ctx.reply(
+          `❌ Failed to analyze your bot idea.\n\n${msg}\n\nTry again with /newbot.`,
+        )
+        return
+      }
 
-      const spec: any = extractJsonFromParts(result.parts)
+      const spec: any = extractJsonFromParts(result.parts ?? [])
 
       if (!spec) {
         await ctx.reply(
@@ -126,29 +259,39 @@ First: what should the bot be called? (One word, no spaces)`
       await ctx.reply(
         `✅ *Parsed your idea!*
 
-*Name*: ${bot.name}
-*Description*: ${bot.description}
-*Language*: ${bot.language}
-*Framework*: ${bot.framework}
-*Features*: ${bot.features.join(', ') || 'None specified'}
-*APIs*: ${bot.externalApis.join(', ') || 'None'}
-
-Starting the pipeline now... I'll build this bot step by step.
-
-🔄 Phase 0: Preflight — validating your spec...`,
-        { parse_mode: 'Markdown' }
+*Name*: ${escapeMarkdown(bot.name)}
+*Description*: ${escapeMarkdown(bot.description)}
+*Language*: ${escapeMarkdown(bot.language)}
+*Framework*: ${escapeMarkdown(bot.framework)}
+*Features*: ${escapeMarkdown(bot.features.join(', ') || 'None specified')}
+*APIs*: ${escapeMarkdown(bot.externalApis.join(', ') || 'None')}`,
+        { parse_mode: 'Markdown' },
       )
 
       const orchestrator = getOrchestrator()
+      await setupTelegramProgress(
+        ctx,
+        userSession,
+        bot,
+        orchestrator,
+        'Phase 0: preflight — starting...',
+      )
+
+      const wsCtx = getContext(telegramId)
+      if (wsCtx) {
+        updateUserSession(telegramId, { workspaceDir: wsCtx.workspaceDir })
+      }
+
       await orchestrator.startPipeline(bot, userSession)
 
-      // Polling mechanism to push updates
-      checkPipelineProgress(ctx, userSession, getOrchestrator())
+      checkPipelineProgress(ctx, userSession, orchestrator, () => {
+        orchestrator.unregisterProgressSink(bot.id)
+      })
       return
     }
 
-    // Generic chat prompt into the OpenCode session
-    if (userSession.activeBotId && userSession.pipelineRunId) {
+    // Generic chat prompt into the OpenCode session (not during deploy)
+    if (userSession.phase !== 9 && userSession.activeBotId && userSession.pipelineRunId) {
       const oc = getOC()
       const ctx_session = getContext(telegramId)
       if (ctx_session) {
@@ -164,6 +307,7 @@ async function checkPipelineProgress(
   ctx: BotFoundryContext,
   userSession: UserSession,
   orchestrator: PipelineOrchestrator,
+  onDone?: () => void,
 ) {
   const check = async () => {
     if (!userSession.pipelineRunId) return
@@ -171,21 +315,23 @@ async function checkPipelineProgress(
     if (!state) return
 
     if (state.status === 'completed') {
+      onDone?.()
       const bot = getBot(userSession.activeBotId!)
       if (bot) {
         updateBot(bot.id, { status: 'ready' })
         userSession.phase = 9
+        updateUserSession(userSession.telegramId, { awaitingDeployChoice: true, phase: 9 })
         await ctx.reply(
           `🎉 *Bot is ready!*
 
-*${bot.name}*
-${bot.description}
+*${escapeMarkdown(bot.name)}*
+${escapeMarkdown(bot.description)}
 
-To deploy, use /deploy
-To check the files, use /files
-To see full status, use /status
+*Run it on this PC:* reply \`windows\`, \`mac\`, or \`linux\`, then paste your new bot token from @BotFather — Foundry will install and start it here.
 
-Or start a new bot with /newbot`,
+Cloud deploy: /deploy (Docker, Fly, Railway)
+/files — browse generated code
+/status — pipeline details`,
           { parse_mode: 'Markdown' }
         )
       }
@@ -193,9 +339,10 @@ Or start a new bot with /newbot`,
     }
 
     if (state.status === 'failed') {
+      onDone?.()
       await ctx.reply(`❌ *Pipeline failed*
 
-${state.error || 'Unknown error'}
+${escapeMarkdown(state.error || 'Unknown error')}
 
 Use /newbot to try again.`,
         { parse_mode: 'Markdown' }
@@ -206,7 +353,7 @@ Use /newbot to try again.`,
     if (state.status === 'awaiting_input') {
       const prompt = state.data.pendingInputPrompt as string
       if (prompt) {
-        await ctx.reply(`✋ *Input needed*\n\n${prompt}`, { parse_mode: 'Markdown' })
+        await ctx.reply(`✋ *Input needed*\n\n${escapeMarkdown(prompt)}`, { parse_mode: 'Markdown' })
       }
       return
     }

@@ -4,6 +4,7 @@ import { extractJsonFromParts } from '../../opencode/utils.js'
 export const review: PhaseHandler = async ({ oc, sessionId, bot, onProgress }) => {
   await onProgress('Running code quality checks...')
 
+  await onProgress('Running npm install + typecheck in workspace...')
   const npmResult = await oc.runCommand(sessionId,
     `cd workspace && ls bot-*/ 2>/dev/null | head -1 | xargs -I {} sh -c 'cd {} && npm install 2>&1 | tail -3; npm run typecheck 2>&1; echo "EXIT:$?"'`
   )
@@ -35,7 +36,8 @@ Respond with JSON:
   "verdict": "pass" | "warn" | "fail"
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  await onProgress('AI code audit in progress...')
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

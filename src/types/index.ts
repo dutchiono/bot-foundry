@@ -37,8 +37,13 @@ export interface PipelineRun {
 export interface UserSession {
   telegramId: number
   activeBotId?: string
+  workspaceDir?: string
+  awaitingDeployChoice?: boolean
+  awaitingChildBotToken?: boolean
   activeOcSessionId?: string
   pipelineRunId?: string
+  progressChatId?: number
+  progressMessageId?: number
   phase: number
   messages: { role: 'user' | 'assistant'; text: string; timestamp: string }[]
 }

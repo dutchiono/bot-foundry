@@ -1,7 +1,8 @@
 import type { PhaseHandler } from './types.js'
 import { extractJsonFromParts } from '../../opencode/utils.js'
 
-export const comparative: PhaseHandler = async ({ oc, sessionId, bot }) => {
+export const comparative: PhaseHandler = async ({ oc, sessionId, bot, onProgress }) => {
+  await onProgress('Comparing bot against alternatives...')
   const prompt = `Compare the generated bot against alternatives and best practices:
 
 Bot: "${bot.name}" (${bot.description})
@@ -34,7 +35,7 @@ Respond with JSON:
   "weaknesses": string[]
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

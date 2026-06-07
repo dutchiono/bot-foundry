@@ -22,6 +22,9 @@
     "docker:run": "docker compose up -d",
     "docker:logs": "docker compose logs -f",
     "docker:stop": "docker compose down",
+    "stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-all.ps1",
+    "reset": "powershell -ExecutionPolicy Bypass -File scripts/stop-all.ps1 -Reset",
+    "start:all": "powershell -ExecutionPolicy Bypass -File scripts/start-all.ps1",
     "ci": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

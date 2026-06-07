@@ -46,8 +46,17 @@ export function createPipelineState(botId: string): PipelineState {
       name: p.name,
       status: 'pending',
     })),
-    data: {},
+    data: {
+      activityLog: [] as string[],
+    },
   }
+}
+
+export function appendActivity(state: PipelineState, line: string, max = 12): void {
+  const log = (state.data.activityLog as string[]) ?? []
+  log.push(line)
+  if (log.length > max) log.splice(0, log.length - max)
+  state.data.activityLog = log
 }
 
 import crypto from 'node:crypto'

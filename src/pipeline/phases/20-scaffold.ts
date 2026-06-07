@@ -78,8 +78,9 @@ Use "python-telegram-bot" v20+ for Python bots with Application class.
 
 Make the bot complete and functional, not a stub. Every feature should be implemented.`
 
-  const result = await oc.sendPrompt(sessionId, prompt)
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress)
   const output = result.parts.map(p => 'text' in p ? p.text : '').join('\n')
+  if (output) await onProgress(`Scaffold output: ${output.length} chars from AI`)
 
   return { success: true, output, data: { generated: true } }
 }

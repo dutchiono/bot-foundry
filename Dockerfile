@@ -25,6 +25,6 @@ ENV NODE_ENV=production
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "fetch('http://localhost:' + (process.env.PORT || 4096) + '/global/health').then(r => r.json()).then(d => { if(!d.healthy) process.exit(1) }).catch(() => process.exit(1))"
+  CMD node -e "process.exit(process.env.BOT_TOKEN ? 0 : 1)"
 
 CMD ["node", "dist/index.js"]

@@ -5,6 +5,7 @@ import { registerDeployCommand } from './handlers/deploy.js'
 import { registerStatusCommand } from './handlers/status.js'
 import { registerOpenCodeCommand } from './handlers/opencode.js'
 import { registerChatHandler } from './handlers/chat.js'
+import { registerStopBotCommand } from './handlers/stopbot.js'
 import type { PipelineOrchestrator } from '../pipeline/orchestrator.js'
 import type { OpenCodeClient } from '../opencode/client.js'
 
@@ -25,6 +26,7 @@ I'm a Telegram bot that builds other Telegram bots — powered by OpenCode.
 *Commands:*
 /newbot — Create a new Telegram bot
 /deploy — Deploy your finished bot
+/stopbot — Stop a hosted bot on this machine
 /status — Check pipeline progress
 /opencode — OpenCode server status
 /help — Show this message
@@ -42,6 +44,7 @@ Let's build something! 🚀`,
 
   bot.command('newbot', registerNewBotCommand(getOrchestrator, getOC))
   bot.command('deploy', registerDeployCommand(getOrchestrator, getOC))
+  bot.command('stopbot', registerStopBotCommand())
   bot.command('status', registerStatusCommand(getOrchestrator))
   bot.command('opencode', registerOpenCodeCommand(getOrchestrator, getOC))
 
@@ -72,6 +75,11 @@ Made with 🧠 + OpenCode SDK`,
   })
 
   bot.on('text', registerChatHandler(getOrchestrator, getOC))
+
+  bot.catch((err, ctx) => {
+    console.error('Telegraf error:', err)
+    ctx.reply('❌ Something went wrong. Try /newbot again.').catch(() => {})
+  })
 
   return bot
 }

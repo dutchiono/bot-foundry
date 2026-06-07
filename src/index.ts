@@ -23,18 +23,15 @@ console.log(`╚═════════════════════�
 const oc = new OpenCodeClient({
   baseUrl: OPENCODE_SERVER_URL,
   password: OPENCODE_SERVER_PASSWORD,
+  providerId: process.env.PROVIDER_ID,
+  modelId: process.env.MODEL_ID,
 })
 
 let orchestratorInstance: PipelineOrchestrator | null = null
 
 function getOrchestrator(): PipelineOrchestrator {
   if (!orchestratorInstance) {
-    orchestratorInstance = new PipelineOrchestrator(
-      oc,
-      async (botId: string, message: string) => {
-        console.log(`[${botId.slice(0, 8)}] ${message}`)
-      },
-    )
+    orchestratorInstance = new PipelineOrchestrator(oc)
   }
   return orchestratorInstance
 }
@@ -53,6 +50,9 @@ async function main() {
   } else {
     console.log(`✅ OpenCode server connected`)
     const agents = await oc.listAgents()
+    const provider = process.env.PROVIDER_ID ?? 'opencode'
+    const model = process.env.MODEL_ID ?? 'mimo-v2.5-free'
+    console.log(`   Model: ${provider}/${model}`)
     console.log(`   Agents available: ${agents.length}`)
   }
 

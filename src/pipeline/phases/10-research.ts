@@ -1,7 +1,8 @@
 import type { PhaseHandler } from './types.js'
 import { extractJsonFromParts } from '../../opencode/utils.js'
 
-export const research: PhaseHandler = async ({ oc, sessionId, bot }) => {
+export const research: PhaseHandler = async ({ oc, sessionId, bot, onProgress }) => {
+  await onProgress('Researching similar bots and market...')
   const prompt = `Research existing Telegram bots similar to "${bot.name}: ${bot.description}".
 
 Search for:
@@ -29,7 +30,7 @@ Respond with JSON:
   "risk_factors": string[]
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

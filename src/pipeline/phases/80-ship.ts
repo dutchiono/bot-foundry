@@ -28,7 +28,7 @@ Respond with JSON:
   "post_deploy_instructions": string
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

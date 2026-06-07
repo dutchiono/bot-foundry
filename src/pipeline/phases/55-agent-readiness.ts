@@ -1,7 +1,8 @@
 import type { PhaseHandler } from './types.js'
 import { extractJsonFromParts } from '../../opencode/utils.js'
 
-export const agentReadiness: PhaseHandler = async ({ oc, sessionId, bot }) => {
+export const agentReadiness: PhaseHandler = async ({ oc, sessionId, bot, onProgress }) => {
+  await onProgress('Scoring agent maintainability...')
   const prompt = `Evaluate the generated bot for "agent readiness" — how well it can be maintained, extended, and debugged by an AI coding agent:
 
 Score 1-10 on these dimensions:
@@ -24,7 +25,7 @@ Respond with JSON:
   "improvements_needed": string[]
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

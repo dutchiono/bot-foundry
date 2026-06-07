@@ -13,6 +13,20 @@ export function extractStructuredOutput(parts: Part[]): string | undefined {
   return textParts.map(p => p.text).join('\n') || undefined
 }
 
+export function extractTextFromParts(parts: Part[]): string {
+  return parts
+    .filter((p): p is Part & { text: string } => p.type === 'text' && 'text' in p)
+    .map(p => p.text)
+    .join('\n')
+    .trim()
+}
+
+export function snippet(text: string, max = 220): string {
+  const oneLine = text.replace(/\s+/g, ' ').trim()
+  if (oneLine.length <= max) return oneLine
+  return `${oneLine.slice(0, max - 1)}…`
+}
+
 export function extractJsonFromParts<T = any>(parts: Part[]): T | null {
   const output = extractStructuredOutput(parts)
   if (!output) return null

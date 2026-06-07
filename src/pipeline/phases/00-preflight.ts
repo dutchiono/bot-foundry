@@ -1,7 +1,8 @@
 import type { PhaseHandler } from './types.js'
 import { extractJsonFromParts } from '../../opencode/utils.js'
 
-export const preflight: PhaseHandler = async ({ oc, sessionId, bot }) => {
+export const preflight: PhaseHandler = async ({ oc, sessionId, bot, onProgress }) => {
+  await onProgress('Validating bot spec with AI...')
   const health = await oc.healthCheck()
   if (!health) {
     return { success: false, error: 'OpenCode server is not reachable' }
@@ -34,7 +35,7 @@ Respond with a JSON object matching this schema:
   "estimated_complexity": "simple" | "moderate" | "complex"
 }`
 
-  const result = await oc.sendPrompt(sessionId, prompt, {
+  const result = await oc.sendPromptWithProgress(sessionId, prompt, onProgress, {
     format: {
       type: 'json_schema',
       schema: {

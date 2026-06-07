@@ -1,7 +1,9 @@
 node_modules/
 dist/
 .env
+.foundry-state.json
 workspace/generated/
+workspace/bot-*/
 *.db
 .runstate/**/runs/*/working/
 coverage/

@@ -5,8 +5,6 @@ services:
     build: .
     container_name: bot-foundry
     restart: unless-stopped
-    ports:
-      - "4096:4096"
     environment:
       - NODE_ENV=production
       - BOT_TOKEN=${BOT_TOKEN:?BOT_TOKEN is required}

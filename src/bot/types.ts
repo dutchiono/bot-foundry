@@ -1,8 +1,17 @@
 import { Context } from 'telegraf'
 import type { UserSession, BotDefinition } from '../types/index.js'
+import { loadPersistedState, savePersistedState } from './persist.js'
 
 export interface BotFoundryContext extends Context {
   session?: UserSession
+}
+
+const loaded = loadPersistedState()
+const sessions = loaded.sessions
+const bots = loaded.bots
+
+function persist(): void {
+  savePersistedState(sessions, bots)
 }
 
 export function createUserSession(telegramId: number): UserSession {
@@ -13,13 +22,12 @@ export function createUserSession(telegramId: number): UserSession {
   }
 }
 
-const sessions = new Map<number, UserSession>()
-
 export function getUserSession(telegramId: number): UserSession {
   let session = sessions.get(telegramId)
   if (!session) {
     session = createUserSession(telegramId)
     sessions.set(telegramId, session)
+    persist()
   }
   return session
 }
@@ -27,10 +35,9 @@ export function getUserSession(telegramId: number): UserSession {
 export function updateUserSession(telegramId: number, updates: Partial<UserSession>): UserSession {
   const session = getUserSession(telegramId)
   Object.assign(session, updates)
+  persist()
   return session
 }
-
-const bots = new Map<string, BotDefinition>()
 
 export function createBotDefinition(
   name: string,
@@ -53,6 +60,7 @@ export function createBotDefinition(
     status: 'idea',
   }
   bots.set(id, bot)
+  persist()
   return bot
 }
 
@@ -64,6 +72,11 @@ export function updateBot(id: string, updates: Partial<BotDefinition>): BotDefin
   const bot = bots.get(id)
   if (bot) {
     Object.assign(bot, updates)
+    persist()
   }
   return bot
+}
+
+export function listBotsForUser(telegramId: number): BotDefinition[] {
+  return [...bots.values()].filter(b => b.creatorId === telegramId)
 }

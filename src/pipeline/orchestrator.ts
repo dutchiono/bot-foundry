@@ -1,6 +1,7 @@
 import type { PhaseHandler } from './phases/types.js'
-import { createPipelineState, PHASES } from './state.js'
+import { appendActivity, createPipelineState, PHASES } from './state.js'
 import type { PipelineState } from './state.js'
+import { summarizePhaseResult } from './summarize.js'
 import type { OpenCodeClient } from '../opencode/client.js'
 import { createBotWorkspace, getContext } from '../opencode/session.js'
 import type { BotDefinition, UserSession } from '../types/index.js'
@@ -18,7 +19,7 @@ import { ship } from './phases/80-ship.js'
 export class PipelineOrchestrator {
   private runs = new Map<string, PipelineState>()
   private oc: OpenCodeClient
-  private onProgress: (botId: string, message: string) => Promise<void>
+  private progressSinks = new Map<string, (message: string) => Promise<void>>()
 
   private phaseHandlers: PhaseHandler[] = [
     preflight,
@@ -32,12 +33,28 @@ export class PipelineOrchestrator {
     ship,
   ]
 
-  constructor(
-    oc: OpenCodeClient,
-    onProgress: (botId: string, message: string) => Promise<void>,
-  ) {
+  constructor(oc: OpenCodeClient) {
     this.oc = oc
-    this.onProgress = onProgress
+  }
+
+  registerProgressSink(botId: string, sink: (message: string) => Promise<void>) {
+    this.progressSinks.set(botId, sink)
+  }
+
+  unregisterProgressSink(botId: string) {
+    this.progressSinks.delete(botId)
+  }
+
+  private async emitProgress(botId: string, message: string, state?: PipelineState) {
+    console.log(`[${botId.slice(0, 8)}] ${message}`)
+    if (state) appendActivity(state, message)
+    const sink = this.progressSinks.get(botId)
+    if (!sink) return
+    try {
+      await sink(message)
+    } catch (err) {
+      console.error(`[${botId.slice(0, 8)}] progress update failed`, err)
+    }
   }
 
   getState(runId: string): PipelineState | undefined {
@@ -73,9 +90,11 @@ export class PipelineOrchestrator {
     for (const phase of PHASES) {
       if (state.status === 'failed') break
 
+      const phaseState = state.phases[phase.number]
+      if (phaseState.status === 'completed') continue
+
       state.currentPhase = phase.number
       state.phaseName = phase.name
-      const phaseState = state.phases[phase.number]
       phaseState.status = 'running'
       phaseState.startedAt = new Date().toISOString()
 
@@ -88,14 +107,14 @@ export class PipelineOrchestrator {
       }
 
       try {
-        await this.onProgress(bot.id, `Phase ${phase.number}: ${phase.name}...`)
+        await this.emitProgress(bot.id, `▶ Phase ${phase.number}: ${phase.name}`, state)
 
         const result = await handler({
           oc: this.oc,
           sessionId: ctx.ocSessionId,
           bot,
           pipelineState: state,
-          onProgress: (msg) => this.onProgress(bot.id, msg),
+          onProgress: (msg) => this.emitProgress(bot.id, msg, state),
         })
 
         if (result.requiresInput) {
@@ -111,26 +130,31 @@ export class PipelineOrchestrator {
           phaseState.error = result.error
           state.status = 'failed'
           state.error = result.error
-          await this.onProgress(bot.id, `Phase ${phase.number} failed: ${result.error}`)
+          await this.emitProgress(bot.id, `❌ Phase ${phase.number} failed: ${result.error}`, state)
           return
         }
 
         phaseState.status = 'completed'
         phaseState.result = result.data
         phaseState.completedAt = new Date().toISOString()
-        await this.onProgress(bot.id, `Phase ${phase.number} complete`)
+        await this.emitProgress(bot.id, `✅ Phase ${phase.number} complete`, state)
+        if (result.data && typeof result.data === 'object') {
+          const summary = summarizePhaseResult(phase.name, result.data as Record<string, unknown>)
+          if (summary) await this.emitProgress(bot.id, summary, state)
+        }
       } catch (err) {
         phaseState.status = 'failed'
         phaseState.error = err instanceof Error ? err.message : String(err)
         state.status = 'failed'
         state.error = err instanceof Error ? err.message : String(err)
-        await this.onProgress(bot.id, `Phase ${phase.number} error: ${err}`)
+        await this.emitProgress(bot.id, `❌ Phase ${phase.number} error: ${err}`, state)
         return
       }
     }
 
     state.status = 'completed'
     state.completedAt = new Date().toISOString()
+    await this.emitProgress(bot.id, '🎉 Pipeline complete', state)
   }
 
   async handleUserInput(
@@ -145,6 +169,7 @@ export class PipelineOrchestrator {
 
     state.status = 'running'
     delete state.data.pendingInputPrompt
+    state.data.lastUserInput = input
 
     const ctx = getContext(userSession.telegramId)
     if (!ctx) throw new Error('No session context')
