@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+      tag:
+        description: "Docker image tag to deploy (default: latest)"
+        type: string
+        default: latest
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    concurrency: deploy-${{ inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via Docker Compose
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          OPENCODE_SERVER_PASSWORD: ${{ secrets.OPENCODE_SERVER_PASSWORD }}
+          IMAGE_TAG: ${{ inputs.tag || 'latest' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+            ${SSH_USER}@${SSH_HOST} bash -s << 'REMOTE'
+            set -e
+            cd /opt/bot-foundry
+            export BOT_TOKEN="${BOT_TOKEN}"
+            export OPENCODE_SERVER_PASSWORD="${OPENCODE_SERVER_PASSWORD}"
+            export IMAGE_TAG="${IMAGE_TAG}"
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+          REMOTE
+
+      - name: Health Check
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          for i in $(seq 1 10); do
+            status=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key \
+              ${SSH_USER}@${SSH_HOST} \
+              "curl -s -o /dev/null -w '%{http_code}' http://localhost:4096/global/health" 2>/dev/null || echo "000")
+            if [ "$status" = "200" ]; then
+              echo "✅ Deployment healthy"
+              exit 0
+            fi
+            echo "Attempt $i: status=$status, retrying..."
+            sleep 5
+          done
+          echo "❌ Health check failed"
+          exit 1

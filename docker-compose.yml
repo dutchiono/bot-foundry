@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  bot-foundry:
+    build: .
+    container_name: bot-foundry
+    restart: unless-stopped
+    ports:
+      - "4096:4096"
+    environment:
+      - NODE_ENV=production
+      - BOT_TOKEN=${BOT_TOKEN:?BOT_TOKEN is required}
+      - OPENCODE_SERVER_URL=http://opencode-server:4097
+    depends_on:
+      opencode-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(process.env.BOT_TOKEN ? 0 : 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  opencode-server:
+    image: ghcr.io/anomalyco/opencode:latest
+    container_name: opencode-server
+    restart: unless-stopped
+    ports:
+      - "4097:4097"
+    volumes:
+      - opencode-data:/home/opencode
+      - ./workspace:/home/opencode/workspace
+      - ./opencode.json:/home/opencode/opencode.json:ro
+    environment:
+      - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD:-}
+      - OPENCODE_ENABLE_EXA=true
+    command: ["serve", "--port", "4097", "--hostname", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4097/global/health').then(r=>r.json()).then(d=>process.exit(d.healthy?0:1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  opencode-data:

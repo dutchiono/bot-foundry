@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+workspace/generated/
+*.db
+.runstate/**/runs/*/working/
+coverage/
+*.log
+.DS_Store
+.trivyignores

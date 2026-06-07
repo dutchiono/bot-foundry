@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+*.db
+.runstate/**/runs/*/working/
+workspace/generated/
+.git
+*.log
+.DS_Store
+coverage
