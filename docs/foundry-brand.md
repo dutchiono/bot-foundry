@@ -14,7 +14,7 @@ Never describe the visual direction out loud — no "riveter look," era referenc
 
 ### Short description
 
-> Describe a Telegram bot. Foundry runs nine phases — research, scaffold, review, ship — and hosts it on your machine.
+> Describe a Telegram bot. Nine-phase line — research, scaffold, review, ship — then host it on your machine.
 
 ### Taglines (pick one)
 
