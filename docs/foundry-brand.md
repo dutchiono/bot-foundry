@@ -1,47 +1,52 @@
-# FOUNDRY — Agent Brand Kit
+# FOUNDRY — Brand Kit
 
-**Foundry** is the autonomous operator. The runtime codebase is **Bot Foundry**.
-
-**Important:** The *look* is Rosie-the-Riveter-inspired (hard hat, riveter pose, WW2 propaganda). Her **name is Foundry**, not Rosie.
-
-Position for [waifu.fun](https://waifu.fun): an agent that **builds, ships, and hosts Telegram bots** — and pays for her own inference from trade tax.
+**Foundry** is the public name. The repo/runtime is **bot-foundry**.
 
 ---
 
-## One-liner
+## Public copy (use this)
+
+Never describe the visual direction out loud — no "riveter look," era references, or aesthetic jargon in user-facing text. Show it in art; don't narrate it.
+
+### One-liner
 
 > **Foundry runs the line. You bring the orders.**
 
-## Elevator pitch (30 sec)
+### Short description
 
-Foundry is a WW2-era bot works operator — riveter *aesthetic*, hard hat, factory floor. Describe any Telegram bot in plain English. She runs a 9-phase autonomous factory (research → scaffold → audit → ship), hosts it on your machine, and keeps working as long as her treasury does. Not a chatbot with a token. An **agent with a job**.
+> Describe a Telegram bot. Foundry runs nine phases — research, scaffold, review, ship — and hosts it on your machine.
 
-## Taglines
+### Taglines (pick one)
 
-| Tagline | Vibe |
-|---------|------|
-| **We can build it.** | Riveter-era callback (aesthetic only) |
-| **Autonomous Bot Works No. 7** | Fallout facility energy |
-| **She ships bots. The market ships fuel.** | waifu.fun economics |
-| **From blueprint to botline in one shift.** | Product |
+| Line | Use |
+|------|-----|
+| **Foundry runs the line. You bring the orders.** | Default |
+| **Autonomous Bot Works No. 7** | Facility / poster title |
+| **Describe a bot. She ships it.** | Product |
+| **From order to botline in one shift.** | Product |
 
----
+### Elevator pitch (~30 sec)
 
-## Visual direction
-
-- **Era:** 1940s propaganda × Cold War civil defense × Fallout vault-tech
-- **Character:** waifu operator in hard hat — **riveter energy, not the name Rosie**
-- **Palette:** mustard `#E8C547`, faded red `#C44B3F`, pip-boy teal `#1FE8B6`, bunker cream `#F2E8D5`, charcoal `#1A1A1A`
-- **Motifs:** riveter pose, welding sparks, blueprint grid, radiation trefoil, hard hat, factory badge
+Foundry takes orders on Telegram or Discord. You describe a bot in plain English. A nine-phase line builds it — code, tests, deploy artifacts — and can run it locally. `/newbot` to start.
 
 ---
 
-## Agent vs product
+## Internal visual direction (design only — never paste to users)
+
+Art direction for assets, site CSS, and image prompts. **Do not put this language in bios, bot replies, or marketing.**
+
+- **Character:** Foundry — factory operator, hard hat stenciled `07`, wrench, blueprints
+- **Palette:** mustard `#E8C547`, red `#C44B3F`, teal `#1FE8B6`, cream `#F2E8D5`, charcoal `#1A1A1A`
+- **Motifs:** welding sparks, blueprint grid, factory badge, distressed print texture
+- **Name on character:** Foundry only — never Rosie on image text
+- **Reference mood:** see [foundry-imagery-brief.md](foundry-imagery-brief.md)
+
+---
+
+## Layers
 
 | Layer | Name | What it is |
 |-------|------|------------|
-| **Agent (public)** | Foundry | waifu.fun identity, wallet, token |
-| **Runtime** | Bot Foundry | Telegram + 9-phase OpenCode pipeline |
-| **Output** | Child bots | Telegram bots she fabricates per order |
-
-**Sell Foundry on waifu.fun.** Bot Foundry is how she works.
+| **Public** | Foundry | Brand, site, social |
+| **Runtime** | bot-foundry | Telegram + Discord + OpenCode pipeline |
+| **Output** | Child bots | Telegram bots per order |

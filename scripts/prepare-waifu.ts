@@ -16,7 +16,7 @@ const body = {
   label: 'AI',
   imageUrl: process.env.FOUNDRY_AVATAR_URL ?? 'https://foundry.bushleague.xyz/assets/foundry-avatar.png',
   description:
-    'Autonomous bot-works operator. Riveter aesthetic, 9-phase factory line. Describe a Telegram bot — she scaffolds, audits, ships, and hosts it. Trade tax refuels inference.',
+    'Bot Works No. 7. Describe a Telegram bot — nine phases scaffold, audit, ship, and host it.',
   bio: 'She runs the line. You bring the orders.',
 }
 

@@ -1,8 +1,10 @@
 # Foundry — AI Image Prompt Pack
 
-Use these prompts in Midjourney, DALL·E, Flux, Stable Diffusion, etc.
+**INTERNAL — design team only.** For Midjourney, DALL·E, Flux, Stable Diffusion, etc.
 
-**Critical:** Character name is **Foundry**. Riveter *aesthetic* only — do **not** put "Rosie" or "Rosie the Riveter" in the image text or as a label.
+This file is art-direction reference. **Never copy this jargon into public copy** (site, bot replies, waifu bio, X posts). Users see the look; they don't read a design brief.
+
+**Character name:** Foundry only on image text — never Rosie / Rosie the Riveter as a label.
 
 ---
 

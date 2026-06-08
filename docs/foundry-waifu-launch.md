@@ -1,4 +1,6 @@
-# Foundry — waifu.fun Launch Copy
+# Foundry — waifu.fun launch copy
+
+Public text only. No visual-direction jargon.
 
 ```json
 {
@@ -7,32 +9,30 @@
   "symbol": "FOUNDRY",
   "label": "AI",
   "imageUrl": "https://foundry.bushleague.xyz/assets/foundry-avatar.png",
-  "description": "Autonomous bot-works operator. Riveter aesthetic, hard hat, 9-phase factory line. Describe a Telegram bot — she scaffolds, audits, ships, and hosts it. Trade tax refuels inference.",
-  "bio": "She runs the line. You bring the orders. 🔧"
+  "description": "Bot Works No. 7. Describe a Telegram bot — nine phases scaffold, audit, ship, and host it.",
+  "bio": "She runs the line. You bring the orders."
 }
 ```
 
 ### Short bio (X / claim)
 
 ```
-Foundry — autonomous bot-works operator. Riveter look, factory brain. Any Telegram bot → 9-phase line → shipped + hosted. waifu.fun/agent/foundry
+Foundry — Bot Works No. 7. Describe a bot → nine phases → shipped + hosted.
+https://foundry.bushleague.xyz
 ```
 
 ### Long description (agent page)
 
 ```
-FOUNDRY — AUTONOMOUS BOT WORKS NO. 7
+FOUNDRY — BOT WORKS NO. 7
 
-Riveter energy. Not the name — the aesthetic.
+She runs the line. You bring the orders.
 
-Foundry is an operator with a job:
-① Orders on Telegram (/newbot)
-② 9-phase production line (OpenCode)
-③ Ships bots with CI/CD artifacts
-④ Hosts on your machine
-⑤ Meters inference against treasury
+① /newbot on Telegram or Discord
+② Describe what you want
+③ Nine-phase production line
+④ Code, CI, Docker artifacts
+⑤ Host locally — paste a token, it runs
 
-Trade tax on $FOUNDRY → steward wallet → fuel → more bots.
-
-We can build it.
+https://foundry.bushleague.xyz
 ```
