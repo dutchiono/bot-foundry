@@ -1,12 +1,15 @@
 import 'dotenv/config'
-import { createBot } from './bot/telegram.js'
+import { createTelegramBot } from './bot/telegram.js'
+import { createDiscordBot } from './bot/discord.js'
 import { OpenCodeClient } from './opencode/client.js'
 import { PipelineOrchestrator } from './pipeline/orchestrator.js'
+import { isElizaCloudEnabled } from './integrations/eliza-cloud.js'
 
-const BOT_TOKEN: string = process.env.BOT_TOKEN ?? ''
-if (!BOT_TOKEN) {
-  console.error('❌ BOT_TOKEN environment variable is required')
-  console.error('   Get one from @BotFather on Telegram')
+const BOT_TOKEN = process.env.BOT_TOKEN?.trim() ?? ''
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN?.trim() ?? ''
+
+if (!BOT_TOKEN && !DISCORD_BOT_TOKEN) {
+  console.error('❌ Set BOT_TOKEN (Telegram) and/or DISCORD_BOT_TOKEN')
   process.exit(1)
 }
 
@@ -14,10 +17,13 @@ const OPENCODE_SERVER_URL = process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1
 const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
 
 console.log(`╔══════════════════════════════════════════╗`)
-console.log(`║        🤖 Bot Foundry v0.1              ║`)
-console.log(`║   Telegram bot that makes Telegram bots  ║`)
+console.log(`║        🤖 Bot Foundry v0.2              ║`)
+console.log(`║   Bot factory — Telegram + Discord       ║`)
 console.log(`╠══════════════════════════════════════════╣`)
 console.log(`║  OpenCode: ${OPENCODE_SERVER_URL.padEnd(27)}║`)
+console.log(`║  Telegram: ${(BOT_TOKEN ? 'on' : 'off').padEnd(27)}║`)
+console.log(`║  Discord:  ${(DISCORD_BOT_TOKEN ? 'on' : 'off').padEnd(27)}║`)
+console.log(`║  Eliza:    ${(isElizaCloudEnabled() ? 'on' : 'off').padEnd(27)}║`)
 console.log(`╚══════════════════════════════════════════╝`)
 
 const oc = new OpenCodeClient({
@@ -41,12 +47,10 @@ function getOC(): OpenCodeClient {
 }
 
 async function main() {
-  // Health check on startup
   const health = await oc.healthCheck()
   if (!health) {
     console.warn(`⚠️  OpenCode server not reachable at ${OPENCODE_SERVER_URL}`)
     console.warn('   Start it with: opencode serve --port 4096')
-    console.warn('   The bot will work but can\'t generate new bots until OpenCode is running.')
   } else {
     console.log(`✅ OpenCode server connected`)
     const agents = await oc.listAgents()
@@ -56,22 +60,30 @@ async function main() {
     console.log(`   Agents available: ${agents.length}`)
   }
 
-  const bot = createBot(BOT_TOKEN, getOrchestrator, getOC)
+  const shutdowns: Array<() => void | Promise<void>> = []
 
-  // Graceful shutdown
-  process.once('SIGINT', async () => {
-    console.log('\nShutting down...')
-    bot.stop('SIGINT')
-    process.exit(0)
-  })
-  process.once('SIGTERM', async () => {
-    console.log('\nShutting down...')
-    bot.stop('SIGTERM')
-    process.exit(0)
-  })
+  if (BOT_TOKEN) {
+    const telegram = createTelegramBot(BOT_TOKEN, getOrchestrator, getOC)
+    await telegram.launch()
+    console.log(`✅ Telegram Foundry is running`)
+    shutdowns.push(() => telegram.stop('shutdown'))
+  }
 
-  await bot.launch()
-  console.log(`✅ Bot Foundry is running! Talk to it on Telegram.`)
+  if (DISCORD_BOT_TOKEN) {
+    createDiscordBot(DISCORD_BOT_TOKEN, getOrchestrator, getOC)
+    console.log(`✅ Discord Foundry is running`)
+  }
+
+  const shutdown = async () => {
+    console.log('\nShutting down...')
+    for (const fn of shutdowns) {
+      await fn()
+    }
+    process.exit(0)
+  }
+
+  process.once('SIGINT', shutdown)
+  process.once('SIGTERM', shutdown)
 }
 
 main().catch((err) => {

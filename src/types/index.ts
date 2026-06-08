@@ -6,7 +6,8 @@ export interface BotDefinition {
   framework: string
   features: string[]
   externalApis: string[]
-  creatorId: number
+  /** Canonical cross-platform owner key, e.g. tg:123 or dc:456 */
+  creatorKey: string
   createdAt: string
   status: BotStatus
 }
@@ -35,14 +36,23 @@ export interface PipelineRun {
 }
 
 export interface UserSession {
-  telegramId: number
+  userKey: string
+  telegramId?: number
+  discordId?: string
   activeBotId?: string
   workspaceDir?: string
   awaitingDeployChoice?: boolean
   awaitingChildBotToken?: boolean
   activeOcSessionId?: string
   pipelineRunId?: string
+  progressChannel?: {
+    platform: 'telegram' | 'discord'
+    chatId: string | number
+    messageId?: string | number
+  }
+  /** @deprecated migrated to progressChannel */
   progressChatId?: number
+  /** @deprecated migrated to progressChannel */
   progressMessageId?: number
   phase: number
   messages: { role: 'user' | 'assistant'; text: string; timestamp: string }[]

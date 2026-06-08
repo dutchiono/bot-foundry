@@ -11,7 +11,7 @@ describe('Types', () => {
       framework: 'telegraf',
       features: [],
       externalApis: [],
-      creatorId: 1,
+      creatorKey: 'tg:1',
       createdAt: new Date().toISOString(),
       status: 'idea',
     }

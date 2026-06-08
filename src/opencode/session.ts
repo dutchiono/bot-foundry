@@ -32,16 +32,16 @@ export async function createBotWorkspace(
     filesCreated: [],
     lastOutput: '',
   }
-  contexts.set(userSession.telegramId.toString(), ctx)
+  contexts.set(userSession.userKey, ctx)
   return ctx
 }
 
-export function getContext(telegramId: number): SessionContext | undefined {
-  return contexts.get(telegramId.toString())
+export function getContext(userKey: string): SessionContext | undefined {
+  return contexts.get(userKey)
 }
 
-export function destroyContext(telegramId: number): void {
-  contexts.delete(telegramId.toString())
+export function destroyContext(userKey: string): void {
+  contexts.delete(userKey)
 }
 
 export async function writeGeneratedFile(

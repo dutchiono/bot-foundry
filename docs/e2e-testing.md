@@ -5,10 +5,11 @@ Automated pipeline runs + one test Telegram token rotated across outputs.
 ## Setup
 
 1. OpenCode running: `opencode serve --port 4096`
-2. In `.env`:
+2. In `.env` — **separate** from Foundry:
 
 ```
-E2E_TEST_CHILD_BOT_TOKEN=123456:ABC...   # spare @BotFather bot for testing
+BOT_TOKEN=...                    # @dot_bot_foundry_bot — the factory
+E2E_TEST_CHILD_BOT_TOKEN=...   # your test child bot — NOT Foundry
 ```
 
 ## Build the bot series (unattended)

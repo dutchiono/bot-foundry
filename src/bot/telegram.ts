@@ -6,10 +6,12 @@ import { registerStatusCommand } from './handlers/status.js'
 import { registerOpenCodeCommand } from './handlers/opencode.js'
 import { registerChatHandler } from './handlers/chat.js'
 import { registerStopBotCommand } from './handlers/stopbot.js'
+import { registerLinkCommand } from './handlers/link.js'
 import type { PipelineOrchestrator } from '../pipeline/orchestrator.js'
 import type { OpenCodeClient } from '../opencode/client.js'
+import { isElizaCloudEnabled } from '../integrations/eliza-cloud.js'
 
-export function createBot(
+export function createTelegramBot(
   token: string,
   getOrchestrator: () => PipelineOrchestrator,
   getOC: () => OpenCodeClient,
@@ -21,42 +23,43 @@ export function createBot(
     await ctx.reply(
       `👋 Welcome to *Bot Foundry*, ${name}!
 
-I'm a Telegram bot that builds other Telegram bots — powered by OpenCode.
+I'm a bot factory that builds Telegram bots — powered by OpenCode.
 
 *Commands:*
 /newbot — Create a new Telegram bot
 /deploy — Deploy your finished bot
 /stopbot — Stop a hosted bot on this machine
 /status — Check pipeline progress
+/link — Link Telegram + Discord accounts
 /opencode — OpenCode server status
 /help — Show this message
 
-*How it works:*
-1. Tell me what bot you want (describe it)
-2. I spin up an *OpenCode* AI coding session
-3. A 9-phase pipeline researches, scaffolds, reviews, and ships your bot
-4. You get a deploy-ready Telegram bot
+*Cross-platform:* run /link here, then /link CODE on Discord to share progress.
 
 Let's build something! 🚀`,
-      { parse_mode: 'Markdown' }
+      { parse_mode: 'Markdown' },
     )
   })
 
   bot.command('newbot', registerNewBotCommand(getOrchestrator, getOC))
   bot.command('deploy', registerDeployCommand(getOrchestrator, getOC))
-  bot.command('stopbot', registerStopBotCommand())
+  bot.command('stopbot', registerStopBotCommand(getOrchestrator))
   bot.command('status', registerStatusCommand(getOrchestrator))
   bot.command('opencode', registerOpenCodeCommand(getOrchestrator, getOC))
+  bot.command('link', registerLinkCommand(getOrchestrator))
 
   bot.help(async (ctx) => {
+    const eliza = isElizaCloudEnabled() ? '\n🧠 Eliza Cloud memory: connected' : ''
     await ctx.reply(
       `*Bot Foundry Help*
 
 /newbot — Start creating a new Telegram bot
 /deploy — Deploy your finished bot to production
+/stopbot — Stop locally hosted child bots
 /status — Check current pipeline or bot status
+/link — Share session with Discord
 /opencode — View OpenCode server connection info
-/help — This message
+/help — This message${eliza}
 
 *Phase Pipeline:*
 0️⃣ Preflight — Validate your bot spec
@@ -67,10 +70,8 @@ Let's build something! 🚀`,
 5️⃣ Review — Lint, typecheck, test
 6️⃣ Agent Readiness — Score for AI maintainability
 7️⃣ Comparative — Compare with alternatives
-8️⃣ Ship — Generate deployment artifacts
-
-Made with 🧠 + OpenCode SDK`,
-      { parse_mode: 'Markdown' }
+8️⃣ Ship — Generate deployment artifacts`,
+      { parse_mode: 'Markdown' },
     )
   })
 
@@ -83,3 +84,6 @@ Made with 🧠 + OpenCode SDK`,
 
   return bot
 }
+
+/** @deprecated use createTelegramBot */
+export const createBot = createTelegramBot

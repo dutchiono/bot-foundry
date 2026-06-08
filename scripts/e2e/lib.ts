@@ -7,7 +7,7 @@ import type { PipelineState } from '../../src/pipeline/state.js'
 import { getContext } from '../../src/opencode/session.js'
 import type { BotDefinition, UserSession } from '../../src/types/index.js'
 import type { E2EBotCase } from '../../tests/fixtures/e2e-bots.js'
-import { startLocalBot, stopLocalBot, listRunningBots } from '../../src/deploy/runner.js'
+import { startLocalBot, stopAllLocalBots } from '../../src/deploy/runner.js'
 
 export const E2E_TELEGRAM_ID = 999_001
 export const MANIFEST_PATH = path.join(process.cwd(), '.e2e-manifest.json')
@@ -117,7 +117,7 @@ export async function waitForPipeline(
   throw new Error(`Pipeline timed out after ${timeoutMs / 1000}s`)
 }
 
-export function buildBotFromCase(testCase: E2EBotCase, creatorId: number): BotDefinition {
+export function buildBotFromCase(testCase: E2EBotCase, creatorKey: string): BotDefinition {
   return {
     id: `e2e-${testCase.id}-${Date.now()}`,
     name: testCase.name,
@@ -126,7 +126,7 @@ export function buildBotFromCase(testCase: E2EBotCase, creatorId: number): BotDe
     framework: testCase.framework,
     features: testCase.features,
     externalApis: testCase.externalApis,
-    creatorId,
+    creatorKey,
     createdAt: new Date().toISOString(),
     status: 'idea',
   }
@@ -142,8 +142,10 @@ export async function runE2ECase(
   await requireOpenCode(oc)
 
   const orchestrator = new PipelineOrchestrator(oc)
-  const bot = buildBotFromCase(testCase, E2E_TELEGRAM_ID)
+  const creatorKey = `tg:${E2E_TELEGRAM_ID}`
+  const bot = buildBotFromCase(testCase, creatorKey)
   const userSession: UserSession = {
+    userKey: creatorKey,
     telegramId: E2E_TELEGRAM_ID,
     phase: 0,
     messages: [],
@@ -192,15 +194,50 @@ export async function runE2ECase(
   }
 }
 
+const FOUNDRY_BOT_USERNAME = (process.env.FOUNDRY_BOT_USERNAME ?? 'dot_bot_foundry_bot').replace(/^@/, '')
+
 export function getChildTestToken(): string {
-  const token = process.env.E2E_TEST_CHILD_BOT_TOKEN?.trim()
+  const token = (
+    process.env.E2E_TEST_CHILD_BOT_TOKEN
+    ?? process.env.CHILD_BOT_TOKEN
+    ?? process.env.TEST_BOT_TOKEN
+  )?.trim()
   if (!token) {
-    throw new Error('Set E2E_TEST_CHILD_BOT_TOKEN in .env (a spare @BotFather bot for rotation)')
+    throw new Error(
+      `Set E2E_TEST_CHILD_BOT_TOKEN in .env — a separate @BotFather bot for testing child workspaces.\n` +
+      `BOT_TOKEN is Foundry (@${FOUNDRY_BOT_USERNAME}) only. Do not use it for e2e:rotate.`,
+    )
+  }
+  if (token === process.env.BOT_TOKEN?.trim()) {
+    throw new Error(
+      `E2E_TEST_CHILD_BOT_TOKEN must not be the same as BOT_TOKEN.\n` +
+      `BOT_TOKEN = Foundry (@${FOUNDRY_BOT_USERNAME}). Create a second bot in @BotFather for child tests.`,
+    )
   }
   return token
 }
 
-export async function rotateTokenToIndex(index: number): Promise<void> {
+export async function assertChildTestToken(token: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`)
+    const data = await res.json() as { ok?: boolean; result?: { username?: string } }
+    const username = data.ok ? data.result?.username : undefined
+    if (username === FOUNDRY_BOT_USERNAME) {
+      throw new Error(
+        `That token is @${FOUNDRY_BOT_USERNAME} (Foundry). Use a different test bot for e2e:rotate.`,
+      )
+    }
+    return username
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('Foundry')) throw err
+    return undefined
+  }
+}
+
+export async function rotateTokenToIndex(
+  index: number,
+  options?: { foreground?: boolean },
+): Promise<void> {
   const manifest = loadManifest()
   if (!manifest) throw new Error('No .e2e-manifest.json — run npm run e2e:batch first')
 
@@ -213,13 +250,12 @@ export async function rotateTokenToIndex(index: number): Promise<void> {
 
   const target = completed[index]
   const token = getChildTestToken()
+  await assertChildTestToken(token)
 
-  for (const running of listRunningBots()) {
-    await stopLocalBot(running.workspaceDir)
-  }
+  await stopAllLocalBots()
 
   console.log(`\nRotating test token → ${target.id} (${target.workspaceDir})`)
-  const result = await startLocalBot(target.workspaceDir!, token)
+  const result = await startLocalBot(target.workspaceDir!, token, { foreground: options?.foreground })
   console.log(result.message)
 
   manifest.rotation.currentIndex = manifest.cases.findIndex(c => c.id === target.id)

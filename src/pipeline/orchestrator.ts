@@ -84,7 +84,7 @@ export class PipelineOrchestrator {
     bot: BotDefinition,
     userSession: UserSession,
   ): Promise<void> {
-    const ctx = getContext(userSession.telegramId)
+    const ctx = getContext(userSession.userKey)
     if (!ctx) throw new Error('No session context')
 
     for (const phase of PHASES) {
@@ -171,7 +171,7 @@ export class PipelineOrchestrator {
     delete state.data.pendingInputPrompt
     state.data.lastUserInput = input
 
-    const ctx = getContext(userSession.telegramId)
+    const ctx = getContext(userSession.userKey)
     if (!ctx) throw new Error('No session context')
 
     await this.oc.sendPrompt(ctx.ocSessionId, `User provided input for the current phase: ${input}`, { noReply: true })

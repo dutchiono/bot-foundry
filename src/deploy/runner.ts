@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -10,6 +10,60 @@ export interface RunningBot {
 }
 
 const running = new Map<string, RunningBot>()
+const PID_FILE = path.join(process.cwd(), '.running-bots.json')
+
+export interface StartLocalBotOptions {
+  /** Attached to terminal — Ctrl+C stops the bot. Default false for Telegram deploy. */
+  foreground?: boolean
+}
+
+function loadPersistedBots(): RunningBot[] {
+  try {
+    if (!fs.existsSync(PID_FILE)) return []
+    return JSON.parse(fs.readFileSync(PID_FILE, 'utf8')) as RunningBot[]
+  } catch {
+    return []
+  }
+}
+
+function savePersistedBots(): void {
+  fs.writeFileSync(PID_FILE, JSON.stringify([...running.values()], null, 2), 'utf8')
+}
+
+function killProcessTree(pid: number): void {
+  if (!pid || pid <= 0) return
+  try {
+    if (process.platform === 'win32') {
+      execSync(`taskkill /PID ${pid} /T /F`, { stdio: 'ignore' })
+    } else {
+      process.kill(-pid, 'SIGTERM')
+    }
+  } catch {
+    try {
+      process.kill(pid, 'SIGKILL')
+    } catch {
+      // already dead
+    }
+  }
+}
+
+function findPidsForWorkspace(absWorkspace: string): number[] {
+  const pids: number[] = []
+  try {
+    if (process.platform === 'win32') {
+      const escaped = absWorkspace.replace(/'/g, "''")
+      const ps = `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${escaped}') } | Select-Object -ExpandProperty ProcessId`
+      const out = execSync(`powershell -NoProfile -Command "${ps}"`, { encoding: 'utf8' })
+      for (const line of out.split(/\r?\n/)) {
+        const n = parseInt(line.trim(), 10)
+        if (!isNaN(n)) pids.push(n)
+      }
+    }
+  } catch {
+    // fallback: tracked pid only
+  }
+  return [...new Set(pids)]
+}
 
 export function isBotToken(text: string): boolean {
   return /^\d+:[A-Za-z0-9_-]{20,}$/.test(text.trim())
@@ -63,6 +117,11 @@ async function fetchBotUsername(token: string): Promise<string | undefined> {
   }
 }
 
+// Rehydrate in-memory map from disk (survives script exit)
+for (const entry of loadPersistedBots()) {
+  running.set(entry.workspaceDir, entry)
+}
+
 export function getRunningBot(workspaceDir: string): RunningBot | undefined {
   return running.get(workspaceDir)
 }
@@ -72,20 +131,50 @@ export function listRunningBots(): RunningBot[] {
 }
 
 export async function stopLocalBot(workspaceDir: string): Promise<boolean> {
+  const abs = path.resolve(process.cwd(), workspaceDir)
+  let stopped = false
+
   const entry = running.get(workspaceDir)
-  if (!entry) return false
-  try {
-    process.kill(entry.pid)
-  } catch {
-    // already dead
+  if (entry) {
+    killProcessTree(entry.pid)
+    running.delete(workspaceDir)
+    stopped = true
   }
-  running.delete(workspaceDir)
-  return true
+
+  for (const pid of findPidsForWorkspace(abs)) {
+    killProcessTree(pid)
+    stopped = true
+  }
+
+  if (stopped) savePersistedBots()
+  return stopped
+}
+
+export async function stopAllLocalBots(): Promise<number> {
+  let count = 0
+  for (const entry of [...running.values()]) {
+    if (await stopLocalBot(entry.workspaceDir)) count++
+  }
+  // Also scan workspace folders
+  const wsRoot = path.join(process.cwd(), 'workspace')
+  if (fs.existsSync(wsRoot)) {
+    for (const dir of fs.readdirSync(wsRoot)) {
+      if (dir.startsWith('bot-')) {
+        const rel = `workspace/${dir}`
+        if (!running.has(rel) && (await stopLocalBot(rel))) count++
+      }
+    }
+  }
+  if (running.size === 0 && fs.existsSync(PID_FILE)) {
+    fs.unlinkSync(PID_FILE)
+  }
+  return count
 }
 
 export async function startLocalBot(
   workspaceDir: string,
   token: string,
+  options?: StartLocalBotOptions,
 ): Promise<{ success: boolean; message: string; username?: string }> {
   const abs = path.resolve(process.cwd(), workspaceDir)
   if (!fs.existsSync(abs)) {
@@ -107,20 +196,73 @@ export async function startLocalBot(
   }
 
   const username = await fetchBotUsername(token)
+  const foreground = options?.foreground === true
+  const childEnv = {
+    ...process.env,
+    BOT_TOKEN: token,
+    TELEGRAM_BOT_TOKEN: token,
+  }
+
+  if (foreground) {
+    return new Promise(resolve => {
+      console.log(`\n▶ Running ${workspaceDir} — Ctrl+C to stop\n`)
+      const child = spawn('npm', ['run', 'dev'], {
+        cwd: abs,
+        shell: true,
+        stdio: 'inherit',
+        env: childEnv,
+      })
+
+      const cleanup = () => {
+        if (child.pid) killProcessTree(child.pid)
+        running.delete(workspaceDir)
+        savePersistedBots()
+      }
+
+      const onSignal = () => {
+        cleanup()
+        process.exit(0)
+      }
+      process.once('SIGINT', onSignal)
+      process.once('SIGTERM', onSignal)
+
+      if (child.pid) {
+        running.set(workspaceDir, {
+          workspaceDir,
+          pid: child.pid,
+          username,
+          startedAt: new Date().toISOString(),
+        })
+        savePersistedBots()
+      }
+
+      child.on('exit', code => {
+        process.off('SIGINT', onSignal)
+        process.off('SIGTERM', onSignal)
+        cleanup()
+        const who = username ? `@${username}` : 'bot'
+        resolve({
+          success: code === 0 || code === null,
+          username,
+          message: code === 0 || code === null
+            ? `Stopped ${who}.`
+            : `${who} exited with code ${code}`,
+        })
+      })
+    })
+  }
 
   const child = spawn('npm', ['run', 'dev'], {
     cwd: abs,
     shell: true,
-    detached: true,
+    detached: process.platform !== 'win32',
     stdio: 'ignore',
-    env: {
-      ...process.env,
-      BOT_TOKEN: token,
-      TELEGRAM_BOT_TOKEN: token,
-    },
+    env: childEnv,
   })
 
-  child.unref()
+  if (process.platform !== 'win32') {
+    child.unref()
+  }
 
   if (!child.pid) {
     return { success: false, message: 'Failed to start bot process.' }
@@ -132,11 +274,12 @@ export async function startLocalBot(
     username,
     startedAt: new Date().toISOString(),
   })
+  savePersistedBots()
 
   const who = username ? `@${username}` : 'your bot'
   return {
     success: true,
     username,
-    message: `✅ Started ${who} on this machine (pid ${child.pid}).\n\nOpen Telegram and message ${who} — it's live as long as this process runs.`,
+    message: `✅ Started ${who} (pid ${child.pid}).\n\nStop: npm run e2e:rotate:stop  or  npm run stop\nForeground (Ctrl+C): npm run e2e:run`,
   }
 }

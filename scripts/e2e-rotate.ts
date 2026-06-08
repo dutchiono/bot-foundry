@@ -9,13 +9,14 @@
  */
 
 import { loadManifest, rotateTokenToIndex, saveManifest } from './e2e/lib.js'
-import { listRunningBots, stopLocalBot } from '../src/deploy/runner.js'
+import { stopAllLocalBots } from '../src/deploy/runner.js'
 
 function parseArgs() {
   const args = process.argv.slice(2)
   return {
     next: args.includes('--next'),
     stop: args.includes('--stop'),
+    foreground: args.includes('--fg') || args.includes('--foreground'),
     index: (() => {
       const i = args.indexOf('--index')
       return i >= 0 ? parseInt(args[i + 1], 10) : undefined
@@ -28,15 +29,10 @@ function parseArgs() {
 }
 
 async function main() {
-  const { next, stop, index, id } = parseArgs()
+  const { next, stop, index, id, foreground } = parseArgs()
 
   if (stop) {
-    const running = listRunningBots()
-    if (running.length === 0) {
-      console.log('No e2e child bots running.')
-      return
-    }
-    for (const b of running) await stopLocalBot(b.workspaceDir)
+    const n = await stopAllLocalBots()
     const manifest = loadManifest()
     if (manifest) {
       manifest.rotation.currentIndex = null
@@ -44,7 +40,7 @@ async function main() {
       manifest.rotation.lastUsername = undefined
       saveManifest(manifest)
     }
-    console.log(`Stopped ${running.length} bot(s).`)
+    console.log(n > 0 ? `Stopped ${n} bot process tree(s).` : 'No child bots running.')
     return
   }
 
@@ -74,7 +70,7 @@ async function main() {
     console.log('No --next/--index/--id — defaulting to first completed bot')
   }
 
-  await rotateTokenToIndex(targetIndex)
+  await rotateTokenToIndex(targetIndex, { foreground })
 }
 
 main().catch(err => {

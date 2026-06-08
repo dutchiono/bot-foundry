@@ -2,7 +2,7 @@
   "name": "bot-foundry",
   "version": "0.1.0",
   "private": true,
-  "description": "Telegram bot that makes Telegram bots — powered by OpenCode",
+  "description": "Telegram + Discord bot factory — powered by OpenCode",
   "type": "module",
   "main": "dist/index.js",
   "engines": {
@@ -20,6 +20,10 @@
     "test:e2e": "vitest run tests/e2e",
     "e2e:batch": "tsx scripts/e2e-run-batch.ts",
     "e2e:rotate": "tsx scripts/e2e-rotate.ts",
+    "e2e:rotate:next": "tsx scripts/e2e-rotate.ts --next",
+    "e2e:rotate:stop": "tsx scripts/e2e-rotate.ts --stop",
+    "e2e:run": "tsx scripts/e2e-run.ts",
+    "e2e:rotate:fg": "tsx scripts/e2e-rotate.ts --next --fg",
     "e2e:status": "tsx scripts/e2e-status.ts",
     "prebuild": "npm run typecheck && npm run test",
     "docker:build": "docker build -t bot-foundry .",
@@ -33,6 +37,7 @@
   },
   "dependencies": {
     "@opencode-ai/sdk": "^1.0.0",
+    "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
     "telegraf": "^4.16.3",
     "uuid": "^10.0.0"

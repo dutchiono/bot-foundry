@@ -10,7 +10,7 @@ describe('Bot Definition', () => {
       framework: 'telegraf',
       features: ['echo'],
       externalApis: [],
-      creatorId: 12345,
+      creatorKey: 'tg:12345',
       createdAt: new Date().toISOString(),
       status: 'idea' as const,
     }

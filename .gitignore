@@ -3,6 +3,7 @@ dist/
 .env
 .foundry-state.json
 .e2e-manifest.json
+.running-bots.json
 workspace/generated/
 workspace/bot-*/
 *.db
