@@ -27,11 +27,15 @@ export function createDiscordMessenger(
     async reply(text, options) {
       const body = options?.markdown === false ? text : toDiscordText(text)
       const textChannel = channel as TextBasedChannel
-      if (textChannel.isSendable()) {
+      if (!textChannel.isSendable()) return
+      try {
         await textChannel.send(body)
+      } catch (err) {
+        console.error('[discord-reply]', err)
+        throw err
       }
     },
-    async setupProgress(bot, userSession, orchestrator, initialLine, options) {
+    async setupProgress(bot, userSession, orchestrator, initialLine) {
       const textChannel = channel as TextBasedChannel
       if (!textChannel.isSendable()) return
 
@@ -39,9 +43,15 @@ export function createDiscordMessenger(
         ? orchestrator.getState(userSession.pipelineRunId)
         : undefined
 
-      const progressMsg = await textChannel.send(
-        toDiscordText(formatPipelineProgress(bot, state, initialLine)),
-      )
+      let progressMsg: Message
+      try {
+        progressMsg = await textChannel.send(
+          toDiscordText(formatPipelineProgress(bot, state, initialLine)),
+        )
+      } catch (err) {
+        console.error('[discord-setup-progress]', err)
+        return
+      }
 
       updateUserSession(userKey, {
         progressChannel: {

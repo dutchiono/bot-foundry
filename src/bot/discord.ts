@@ -18,8 +18,44 @@ import {
   runLinkCommand,
 } from './core/commands.js'
 import { isElizaCloudEnabled } from '../integrations/eliza-cloud.js'
+import type { FoundryMessenger } from './platform/types.js'
 
 const COMMAND_PREFIX = '/'
+
+type CommandHandler = (
+  messenger: FoundryMessenger,
+  text: string,
+  getOrchestrator: () => PipelineOrchestrator,
+  getOC: () => OpenCodeClient,
+) => Promise<void>
+
+async function showDiscordHelp(messenger: FoundryMessenger): Promise<void> {
+  const eliza = isElizaCloudEnabled() ? '\nEliza Cloud memory: connected' : ''
+  await messenger.reply(
+    `Welcome to **Bot Foundry**, ${messenger.displayName}!
+
+I'm a bot factory that builds Telegram bots — same session as Telegram when you /link.
+
+**Commands:** /newbot /deploy /stopbot /status /link /opencode /help${eliza}
+
+**Cross-platform:** /link here, then paste the code on Telegram with /link CODE`,
+    { markdown: false },
+  )
+}
+
+const COMMAND_HANDLERS: Record<string, CommandHandler> = {
+  start: async (messenger) => showDiscordHelp(messenger),
+  help: async (messenger) => showDiscordHelp(messenger),
+  newbot: async (messenger) => runNewBotCommand(messenger),
+  deploy: async (messenger) => runDeployCommand(messenger),
+  stopbot: async (messenger) => runStopBotCommand(messenger),
+  status: async (messenger, _text, getOrchestrator) => runStatusCommand(messenger, getOrchestrator),
+  opencode: async (messenger, _text, _orch, getOC) => runOpenCodeCommand(messenger, getOC),
+  link: async (messenger, text) => {
+    const args = text.replace(/^\/link\s*/i, '').trim()
+    await runLinkCommand(messenger, args)
+  },
+}
 
 export function createDiscordBot(
   token: string,
@@ -54,48 +90,21 @@ export function createDiscordBot(
 
     const text = message.content.trim()
 
-    if (text === `${COMMAND_PREFIX}start` || text === `${COMMAND_PREFIX}help`) {
-      const eliza = isElizaCloudEnabled() ? '\nEliza Cloud memory: connected' : ''
-      await messenger.reply(
-        `Welcome to **Bot Foundry**, ${messenger.displayName}!
+    try {
+      const commandName = text.startsWith(COMMAND_PREFIX)
+        ? text.slice(1).split(/\s+/)[0]?.toLowerCase()
+        : undefined
 
-I'm a bot factory that builds Telegram bots — same session as Telegram when you /link.
+      if (commandName && COMMAND_HANDLERS[commandName]) {
+        await COMMAND_HANDLERS[commandName](messenger, text, getOrchestrator, getOC)
+        return
+      }
 
-**Commands:** /newbot /deploy /stopbot /status /link /opencode /help${eliza}
-
-**Cross-platform:** /link here, then paste the code on Telegram with /link CODE`,
-        { markdown: false },
-      )
-      return
+      await handleFoundryMessage(messenger, text, getOrchestrator, getOC)
+    } catch (err) {
+      console.error('[discord][messageCreate]', err)
+      await messenger.reply('❌ Something went wrong. Try again.', { markdown: false }).catch(() => {})
     }
-
-    if (text.startsWith(`${COMMAND_PREFIX}newbot`)) {
-      await runNewBotCommand(messenger)
-      return
-    }
-    if (text.startsWith(`${COMMAND_PREFIX}deploy`)) {
-      await runDeployCommand(messenger)
-      return
-    }
-    if (text.startsWith(`${COMMAND_PREFIX}stopbot`)) {
-      await runStopBotCommand(messenger)
-      return
-    }
-    if (text.startsWith(`${COMMAND_PREFIX}status`)) {
-      await runStatusCommand(messenger, getOrchestrator)
-      return
-    }
-    if (text.startsWith(`${COMMAND_PREFIX}opencode`)) {
-      await runOpenCodeCommand(messenger, getOC)
-      return
-    }
-    if (text.startsWith(`${COMMAND_PREFIX}link`)) {
-      const args = text.replace(/^\/link\s*/i, '').trim()
-      await runLinkCommand(messenger, args)
-      return
-    }
-
-    await handleFoundryMessage(messenger, text, getOrchestrator, getOC)
   })
 
   client.on('error', (err) => {

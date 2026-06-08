@@ -38,42 +38,51 @@ Send me your description and I'll start building!`,
 }
 
 export async function runDeployCommand(messenger: FoundryMessenger): Promise<void> {
-  const userSession = getUserSession(messenger.userKey)
-  let bot = userSession.activeBotId ? getBot(userSession.activeBotId) : undefined
+  try {
+    const userSession = getUserSession(messenger.userKey)
+    let bot = userSession.activeBotId ? getBot(userSession.activeBotId) : undefined
 
-  if (!bot) {
-    const recovered = findLatestReadyBotForUser(getBotsMap(), messenger.userKey)
-    if (recovered) {
-      updateUserSession(messenger.userKey, { activeBotId: recovered.id, phase: 9 })
-      bot = recovered
-      await messenger.reply(`♻️ Recovered *${escapeMarkdown(recovered.name)}* from saved state.`)
+    if (userSession.activeBotId && !bot) {
+      updateUserSession(messenger.userKey, { activeBotId: undefined })
     }
-  }
 
-  if (!bot) {
-    const wsDir = findLatestWorkspaceDir()
-    if (wsDir) {
-      updateUserSession(messenger.userKey, {
-        awaitingDeployChoice: true,
-        workspaceDir: wsDir,
-        phase: 9,
-      })
-      await messenger.reply(
-        `No session in memory (server likely restarted), but your code is still on disk:\n\`${escapeMarkdown(wsDir)}\`\n\nReply \`windows\`, \`mac\`, \`linux\`, or \`docker\` for run instructions.`,
-      )
+    if (!bot) {
+      const recovered = findLatestReadyBotForUser(getBotsMap(), messenger.userKey)
+      if (recovered?.id && recovered.name) {
+        updateUserSession(messenger.userKey, { activeBotId: recovered.id, phase: 9 })
+        bot = recovered
+        await messenger.reply(`♻️ Recovered *${escapeMarkdown(recovered.name)}* from saved state.`)
+      }
+    }
+
+    if (!bot) {
+      const wsDir = findLatestWorkspaceDir()
+      if (wsDir) {
+        updateUserSession(messenger.userKey, {
+          awaitingDeployChoice: true,
+          workspaceDir: wsDir,
+          phase: 9,
+        })
+        await messenger.reply(
+          `No session in memory (server likely restarted), but your code is still on disk:\n\`${escapeMarkdown(wsDir)}\`\n\nReply \`windows\`, \`mac\`, \`linux\`, or \`docker\` for run instructions.`,
+        )
+        return
+      }
+      await messenger.reply('No active bot. Use /newbot to create one first.')
       return
     }
-    await messenger.reply('No active bot. Use /newbot to create one first.')
-    return
-  }
 
-  if (bot.status !== 'ready') {
-    await messenger.reply(`Bot is still in "${bot.status}" phase. Complete the pipeline first. Check status with /status`)
-    return
-  }
+    if (bot.status !== 'ready') {
+      await messenger.reply(`Bot is still in "${bot.status}" phase. Complete the pipeline first. Check status with /status`)
+      return
+    }
 
-  updateUserSession(messenger.userKey, { awaitingDeployChoice: true, phase: 9 })
-  await messenger.reply(deployMenuText(bot.name))
+    updateUserSession(messenger.userKey, { awaitingDeployChoice: true, phase: 9 })
+    await messenger.reply(deployMenuText(bot.name))
+  } catch (err) {
+    console.error('[deploy]', err)
+    await messenger.reply('❌ Deploy failed. Try /status or /newbot.')
+  }
 }
 
 export async function runStatusCommand(
@@ -164,14 +173,18 @@ export async function runOpenCodeCommand(
 export async function runLinkCommand(messenger: FoundryMessenger, args: string): Promise<void> {
   const trimmed = args.trim()
   if (!trimmed) {
-    const code = issueLinkCode(messenger.userKey)
+    const issued = issueLinkCode(messenger.userKey)
+    if (!issued.ok) {
+      await messenger.reply(`❌ ${issued.error}`)
+      return
+    }
     await messenger.reply(
       `🔗 *Link your accounts*
 
-Your code: \`${code}\`
+Your code: \`${issued.code}\`
 
 On your *other* platform (Telegram or Discord), run:
-\`/link ${code}\`
+\`/link ${issued.code}\`
 
 Codes expire in 10 minutes. After linking, your bots and pipeline progress are shared.`,
     )

@@ -6,6 +6,42 @@ import { updateUserSession } from '../types.js'
 import { escapeMarkdown, formatPipelineProgress } from '../format.js'
 import type { FoundryMessenger } from './types.js'
 
+function isMissingMessageError(err: unknown): boolean {
+  const detail = err instanceof Error ? err.message : String(err)
+  return detail.includes('message to edit not found')
+    || detail.includes("message can't be edited")
+    || detail.includes('MESSAGE_ID_INVALID')
+}
+
+async function editOrRecreateProgress(
+  ctx: BotFoundryContext,
+  userKey: string,
+  chatId: number,
+  messageId: number | undefined,
+  text: string,
+): Promise<number> {
+  if (messageId) {
+    try {
+      await ctx.telegram.editMessageText(chatId, messageId, undefined, text, { parse_mode: 'Markdown' })
+      return messageId
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      if (!detail.includes('message is not modified')) {
+        console.error('[telegram-edit-progress]', detail)
+      }
+      if (!isMissingMessageError(err)) return messageId
+    }
+  }
+
+  const statusMsg = await ctx.reply(text, { parse_mode: 'Markdown' })
+  updateUserSession(userKey, {
+    progressChannel: { platform: 'telegram', chatId, messageId: statusMsg.message_id },
+    progressChatId: chatId,
+    progressMessageId: statusMsg.message_id,
+  })
+  return statusMsg.message_id
+}
+
 export function createTelegramMessenger(
   ctx: BotFoundryContext,
   userKey: string,
@@ -32,28 +68,8 @@ export function createTelegramMessenger(
       let messageId = forceNew ? undefined : userSession.progressChannel?.messageId as number | undefined
         ?? userSession.progressMessageId
 
-      if (!messageId) {
-        const statusMsg = await ctx.reply(
-          formatPipelineProgress(bot, state, initialLine),
-          { parse_mode: 'Markdown' },
-        )
-        messageId = statusMsg.message_id
-        updateUserSession(userKey, {
-          progressChannel: { platform: 'telegram', chatId, messageId },
-          progressChatId: chatId,
-          progressMessageId: messageId,
-        })
-      } else {
-        await ctx.telegram
-          .editMessageText(
-            chatId,
-            messageId,
-            undefined,
-            formatPipelineProgress(bot, state, initialLine),
-            { parse_mode: 'Markdown' },
-          )
-          .catch(() => {})
-      }
+      const text = formatPipelineProgress(bot, state, initialLine)
+      messageId = await editOrRecreateProgress(ctx, userKey, chatId, messageId, text)
 
       registerTelegramProgressSink(ctx, userKey, chatId, messageId, bot, userSession, orchestrator, getOrchestrator)
     },
@@ -63,9 +79,13 @@ export function createTelegramMessenger(
       const targetChat = (channel?.chatId as number) ?? chatId
       const targetMsg = (channel?.messageId as number) ?? userSession.progressMessageId
       if (!targetMsg) return
-      await ctx.telegram
-        .editMessageText(targetChat, targetMsg, undefined, formatPipelineProgress(bot, state, line), { parse_mode: 'Markdown' })
-        .catch(() => {})
+      await editOrRecreateProgress(
+        ctx,
+        userKey,
+        targetChat,
+        targetMsg,
+        formatPipelineProgress(bot, state, line),
+      )
     },
   }
 
@@ -91,14 +111,7 @@ function registerTelegramProgressSink(
     const channel = userSession.progressChannel
     const targetChat = (channel?.chatId as number) ?? chatId
     const targetMsg = (channel?.messageId as number) ?? messageId
-    await ctx.telegram
-      .editMessageText(targetChat, targetMsg, undefined, text, { parse_mode: 'Markdown' })
-      .catch((err: unknown) => {
-        const detail = err instanceof Error ? err.message : String(err)
-        if (!detail.includes('message is not modified')) {
-          console.error('[telegram-progress]', detail)
-        }
-      })
+    await editOrRecreateProgress(ctx, userKey, targetChat, targetMsg, text)
   })
 }
 

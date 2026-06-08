@@ -1,23 +1,14 @@
 import type { BotFoundryContext } from '../types.js'
-import { getUserSessionForPlatform } from '../types.js'
 import type { PipelineOrchestrator } from '../../pipeline/orchestrator.js'
-import { createTelegramMessenger } from '../platform/telegram-messenger.js'
 import { runStatusCommand } from '../core/commands.js'
+import { withTelegramMessenger } from './with-telegram.js'
 
 export function registerStatusCommand(
   getOrchestrator: () => PipelineOrchestrator,
 ) {
   return async (ctx: BotFoundryContext) => {
-    const telegramId = ctx.from?.id
-    if (!telegramId) return
-
-    const userSession = getUserSessionForPlatform('telegram', telegramId)
-    const messenger = createTelegramMessenger(
-      ctx,
-      userSession.userKey,
-      ctx.from?.first_name ?? 'friend',
-      getOrchestrator,
+    await withTelegramMessenger(ctx, getOrchestrator, (messenger) =>
+      runStatusCommand(messenger, getOrchestrator),
     )
-    await runStatusCommand(messenger, getOrchestrator)
   }
 }

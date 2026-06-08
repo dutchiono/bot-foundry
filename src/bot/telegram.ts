@@ -10,6 +10,7 @@ import { registerLinkCommand } from './handlers/link.js'
 import type { PipelineOrchestrator } from '../pipeline/orchestrator.js'
 import type { OpenCodeClient } from '../opencode/client.js'
 import { isElizaCloudEnabled } from '../integrations/eliza-cloud.js'
+import { escapeMarkdown } from './format.js'
 
 export function createTelegramBot(
   token: string,
@@ -19,7 +20,7 @@ export function createTelegramBot(
   const bot = new Telegraf<BotFoundryContext>(token)
 
   bot.start(async (ctx) => {
-    const name = ctx.from?.first_name || 'friend'
+    const name = escapeMarkdown(ctx.from?.first_name || 'friend')
     await ctx.reply(
       `👋 Welcome to *Bot Foundry*, ${name}!
 

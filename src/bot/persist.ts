@@ -73,11 +73,9 @@ export function loadPersistedState(): {
         }),
       )
       const bots = new Map((data.bots ?? []).map(([id, b]) => [id, migrateBot(b)] as const))
-      return {
-        sessions,
-        bots,
-        links: data.links ?? createEmptyLinkState(),
-      }
+      const links = data.links ?? createEmptyLinkState()
+      if (!links.limits) links.limits = {}
+      return { sessions, bots, links }
     }
 
     const v1 = data as PersistedStateV1
@@ -88,7 +86,8 @@ export function loadPersistedState(): {
       }),
     )
     const bots = new Map((v1.bots ?? []).map(([id, b]) => [id, migrateBot(b)] as const))
-    return { sessions, bots, links: createEmptyLinkState() }
+    const links = createEmptyLinkState()
+    return { sessions, bots, links }
   } catch (err) {
     console.warn('[persist] Failed to load state, starting fresh:', err)
     return { sessions: new Map(), bots: new Map(), links: createEmptyLinkState() }

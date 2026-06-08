@@ -83,10 +83,12 @@ export function mergeUserSessions(aliasKey: string, canonicalKey: string): UserS
   return target
 }
 
-export function issueLinkCode(userKey: string): string {
-  const code = createLinkCode(resolveUserKey(userKey), linkState)
-  persist()
-  return code
+export function issueLinkCode(
+  userKey: string,
+): { ok: true; code: string } | { ok: false; error: string } {
+  const result = createLinkCode(resolveUserKey(userKey), linkState)
+  if (result.ok) persist()
+  return result
 }
 
 export function applyLinkCode(

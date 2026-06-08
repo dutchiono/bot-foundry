@@ -17,7 +17,27 @@ import { isBotToken, startLocalBot } from '../../deploy/runner.js'
 import type { FoundryMessenger } from '../platform/types.js'
 import { pushElizaMemory } from '../../integrations/eliza-cloud.js'
 
+const userMessageChains = new Map<string, Promise<unknown>>()
+
+function enqueueUserMessage<T>(userKey: string, fn: () => Promise<T>): Promise<T> {
+  const prior = userMessageChains.get(userKey) ?? Promise.resolve()
+  const next = prior.catch(() => {}).then(fn)
+  userMessageChains.set(userKey, next)
+  return next
+}
+
 export async function handleFoundryMessage(
+  messenger: FoundryMessenger,
+  rawText: string,
+  getOrchestrator: () => PipelineOrchestrator,
+  getOC: () => OpenCodeClient,
+): Promise<void> {
+  return enqueueUserMessage(messenger.userKey, () =>
+    handleFoundryMessageInner(messenger, rawText, getOrchestrator, getOC),
+  )
+}
+
+async function handleFoundryMessageInner(
   messenger: FoundryMessenger,
   rawText: string,
   getOrchestrator: () => PipelineOrchestrator,
@@ -247,12 +267,16 @@ async function checkPipelineProgress(
   orchestrator: PipelineOrchestrator,
   onDone?: () => void,
 ): Promise<void> {
+  let finished = false
+
   const check = async () => {
-    if (!userSession.pipelineRunId) return
+    if (finished || !userSession.pipelineRunId) return
     const state = orchestrator.getState(userSession.pipelineRunId)
     if (!state) return
 
     if (state.status === 'completed') {
+      if (finished) return
+      finished = true
       onDone?.()
       const bot = getBot(userSession.activeBotId!)
       if (bot) {
@@ -275,6 +299,8 @@ Cloud deploy: /deploy (Docker, Fly, Railway)
     }
 
     if (state.status === 'failed') {
+      if (finished) return
+      finished = true
       onDone?.()
       await messenger.reply(`❌ *Pipeline failed*
 
@@ -289,10 +315,11 @@ Use /newbot to try again.`)
       if (prompt) {
         await messenger.reply(`✋ *Input needed*\n\n${escapeMarkdown(prompt)}`)
       }
+      finished = true
       return
     }
 
-    setTimeout(check, 2000)
+    if (!finished) setTimeout(check, 2000)
   }
 
   setTimeout(check, 2000)

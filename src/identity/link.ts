@@ -1,14 +1,39 @@
 import crypto from 'node:crypto'
 import type { UserSession } from '../types/index.js'
 
+export const LINK_CODE_PATTERN = /^[A-F0-9]{6}$/
+
+const MAX_ISSUE_PER_HOUR = 5
+const MAX_APPLY_PER_MINUTE = 10
+const ISSUE_WINDOW_MS = 60 * 60 * 1000
+const APPLY_WINDOW_MS = 60 * 1000
+
+export interface UserLinkLimits {
+  issueAt: number[]
+  applyAt: number[]
+}
+
 export interface AccountLinkState {
   /** alias userKey → canonical userKey */
   canonical: Record<string, string>
   pending: Record<string, { from: string; expiresAt: string }>
+  limits: Record<string, UserLinkLimits>
 }
 
 export function createEmptyLinkState(): AccountLinkState {
-  return { canonical: {}, pending: {} }
+  return { canonical: {}, pending: {}, limits: {} }
+}
+
+function getLimits(links: AccountLinkState, userKey: string): UserLinkLimits {
+  if (!links.limits[userKey]) {
+    links.limits[userKey] = { issueAt: [], applyAt: [] }
+  }
+  return links.limits[userKey]
+}
+
+function pruneTimestamps(timestamps: number[], windowMs: number): number[] {
+  const cutoff = Date.now() - windowMs
+  return timestamps.filter(t => t > cutoff)
 }
 
 export function resolveCanonical(userKey: string, links: AccountLinkState): string {
@@ -21,13 +46,23 @@ export function resolveCanonical(userKey: string, links: AccountLinkState): stri
   return current
 }
 
-export function createLinkCode(fromUserKey: string, links: AccountLinkState): string {
+export function createLinkCode(
+  fromUserKey: string,
+  links: AccountLinkState,
+): { ok: true; code: string } | { ok: false; error: string } {
+  const limits = getLimits(links, fromUserKey)
+  limits.issueAt = pruneTimestamps(limits.issueAt, ISSUE_WINDOW_MS)
+  if (limits.issueAt.length >= MAX_ISSUE_PER_HOUR) {
+    return { ok: false, error: 'Too many link codes requested. Try again later.' }
+  }
+
   const code = crypto.randomBytes(3).toString('hex').toUpperCase()
   links.pending[code] = {
     from: fromUserKey,
     expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
   }
-  return code
+  limits.issueAt.push(Date.now())
+  return { ok: true, code }
 }
 
 export function consumeLinkCode(
@@ -36,6 +71,17 @@ export function consumeLinkCode(
   links: AccountLinkState,
 ): { ok: true; mergedInto: string } | { ok: false; error: string } {
   const normalized = code.trim().toUpperCase()
+  if (!LINK_CODE_PATTERN.test(normalized)) {
+    return { ok: false, error: 'Invalid link code format.' }
+  }
+
+  const limits = getLimits(links, toUserKey)
+  limits.applyAt = pruneTimestamps(limits.applyAt, APPLY_WINDOW_MS)
+  if (limits.applyAt.length >= MAX_APPLY_PER_MINUTE) {
+    return { ok: false, error: 'Too many link attempts. Wait a minute and try again.' }
+  }
+  limits.applyAt.push(Date.now())
+
   const pending = links.pending[normalized]
   if (!pending) return { ok: false, error: 'Invalid or expired link code.' }
 

@@ -14,7 +14,7 @@ async function main() {
 
   const idx = manifest.rotation.currentIndex
   let targetIndex = 0
-  if (idx !== null && idx >= 0) {
+  if (idx !== null && idx >= 0 && idx < manifest.cases.length) {
     const found = completed.findIndex(c => c.id === manifest.cases[idx]?.id)
     targetIndex = found >= 0 ? found : 0
   }
@@ -23,6 +23,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error(err.message || err)
+  console.error(err)
   process.exit(1)
 })
