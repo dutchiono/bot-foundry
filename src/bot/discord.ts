@@ -17,7 +17,6 @@ import {
   runOpenCodeCommand,
   runLinkCommand,
 } from './core/commands.js'
-import { isElizaCloudEnabled } from '../integrations/eliza-cloud.js'
 import type { FoundryMessenger } from './platform/types.js'
 
 const COMMAND_PREFIX = '/'
@@ -30,15 +29,14 @@ type CommandHandler = (
 ) => Promise<void>
 
 async function showDiscordHelp(messenger: FoundryMessenger): Promise<void> {
-  const eliza = isElizaCloudEnabled() ? '\nEliza Cloud memory: connected' : ''
   await messenger.reply(
-    `Welcome to **Bot Foundry**, ${messenger.displayName}!
+    `FOUNDRY — Bot Works No. 7
 
-I'm a bot factory that builds Telegram bots — same session as Telegram when you /link.
+${messenger.displayName}, you bring the orders. She runs the line.
 
-**Commands:** /newbot /deploy /stopbot /status /link /opencode /help${eliza}
+/newbot /deploy /status /stopbot /link /opencode /help
 
-**Cross-platform:** /link here, then paste the code on Telegram with /link CODE`,
+/link here, then /link CODE on Telegram to share the same session.`,
     { markdown: false },
   )
 }

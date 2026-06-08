@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FOUNDRY — Autonomous Bot Works No. 7</title>
-  <meta name="description" content="Foundry runs the line. Riveter look, factory brain. Describe a Telegram bot — she ships it." />
+  <title>FOUNDRY — Bot Works No. 7</title>
+  <meta name="description" content="Foundry runs the line. Describe a Telegram bot — she ships it." />
   <link rel="canonical" href="https://foundry.bushleague.xyz/" />
   <meta property="og:url" content="https://foundry.bushleague.xyz/" />
-  <meta property="og:title" content="FOUNDRY — Autonomous Bot Works No. 7" />
-  <meta property="og:description" content="She runs the line. You bring the orders. Riveter-aesthetic agent that ships Telegram bots on waifu.fun." />
+  <meta property="og:title" content="FOUNDRY — Bot Works No. 7" />
+  <meta property="og:description" content="She runs the line. You bring the orders." />
   <meta property="og:image" content="https://foundry.bushleague.xyz/assets/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="theme-color" content="#e8c547" />
@@ -25,164 +25,208 @@
       --bunker: #2d2a26;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
       font-family: 'IBM Plex Mono', monospace;
       background: var(--charcoal);
       color: var(--cream);
-      line-height: 1.6;
-      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
     }
+
+    /* Blueprint grid + halftone */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       background:
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.15) 2px, rgba(0,0,0,.15) 4px),
-        radial-gradient(ellipse at 20% 0%, rgba(232,197,71,.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 100%, rgba(31,232,182,.05) 0%, transparent 40%);
+        linear-gradient(rgba(232,197,71,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,197,71,.04) 1px, transparent 1px);
+      background-size: 48px 48px;
       pointer-events: none;
       z-index: 0;
     }
-    .wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,.55) 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.12) 2px, rgba(0,0,0,.12) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 2rem;
+    }
+
     .stamp {
       display: inline-block;
-      border: 3px solid var(--red);
+      border: 2px solid var(--red);
       color: var(--red);
-      padding: .25rem .75rem;
-      font-size: .7rem;
-      letter-spacing: .2em;
+      padding: .2rem .6rem;
+      font-size: .65rem;
+      letter-spacing: .18em;
       text-transform: uppercase;
-      transform: rotate(-2deg);
-      margin-bottom: 1.5rem;
+      transform: rotate(-1.5deg);
+      margin-bottom: 2rem;
+      width: fit-content;
     }
-    h1, h2 { font-family: 'Bebas Neue', sans-serif; font-weight: 400; letter-spacing: .04em; }
+
     h1 {
-      font-size: clamp(3.5rem, 12vw, 7rem);
-      line-height: .9;
+      font-family: 'Bebas Neue', sans-serif;
+      font-weight: 400;
+      font-size: clamp(4rem, 18vw, 8.5rem);
+      line-height: .85;
       color: var(--mustard);
-      text-shadow: 3px 3px 0 var(--red);
+      text-shadow: 4px 4px 0 var(--red);
+      letter-spacing: .02em;
     }
-    h1 span { color: var(--cream); display: block; font-size: .35em; letter-spacing: .3em; margin-top: .5rem; }
-    .tagline { font-size: 1.1rem; color: var(--teal); margin: 1.5rem 0 2rem; max-width: 32rem; }
-    .subnote { font-size: .8rem; opacity: .65; margin-top: -.5rem; margin-bottom: 2rem; }
-    .cta-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 3rem; }
-    .btn {
-      display: inline-block;
-      padding: .85rem 1.5rem;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: .85rem;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      border: 2px solid;
-      transition: background .2s, color .2s;
+
+    .works-no {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1rem, 4vw, 1.35rem);
+      letter-spacing: .45em;
+      color: var(--cream);
+      opacity: .75;
+      margin-top: .6rem;
     }
-    .btn-primary { background: var(--red); border-color: var(--red); color: var(--cream); }
-    .btn-primary:hover { background: #a83a30; }
-    .btn-secondary { border-color: var(--teal); color: var(--teal); }
-    .btn-secondary:hover { background: rgba(31,232,182,.1); }
-    .panel {
-      background: var(--bunker);
-      border: 1px solid rgba(232,197,71,.25);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      position: relative;
-    }
-    .panel::before {
-      content: '█';
-      position: absolute;
-      top: .5rem;
-      right: .75rem;
+
+    .tagline {
+      margin: 2rem 0 2.5rem;
+      font-size: 1rem;
       color: var(--teal);
-      animation: blink 1.2s step-end infinite;
+      max-width: 22rem;
+    }
+
+    .status {
+      font-size: .75rem;
+      color: var(--mustard);
+      margin-bottom: 2.5rem;
+      opacity: .85;
+    }
+    .status .cursor {
+      animation: blink 1s step-end infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
-    .panel h2 { font-size: 1.5rem; color: var(--mustard); margin-bottom: .75rem; }
-    .panel p { font-size: .9rem; opacity: .9; }
-    .phases {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: .5rem;
-      margin-top: 1rem;
-    }
-    .phase {
-      background: rgba(0,0,0,.3);
+
+    .steps {
       border-left: 3px solid var(--red);
-      padding: .5rem .75rem;
-      font-size: .75rem;
+      padding-left: 1.25rem;
+      margin-bottom: 2.5rem;
+      font-size: .85rem;
     }
-    .phase strong { color: var(--mustard); }
-    .agent-box {
-      border: 2px dashed var(--teal);
-      padding: 1.5rem;
-      margin: 2rem 0;
-      text-align: center;
+    .steps li {
+      list-style: none;
+      margin-bottom: .65rem;
+      opacity: .9;
     }
-    .agent-box h2 { font-size: 2rem; color: var(--teal); margin-bottom: .5rem; }
-    .stats { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-top: 1rem; font-size: .8rem; }
-    .stats div strong { display: block; font-size: 1.5rem; color: var(--mustard); font-family: 'Bebas Neue', sans-serif; }
-    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,.1); font-size: .75rem; opacity: .6; text-align: center; }
-    .trefoil { font-size: 1.2rem; opacity: .4; }
+    .steps li::before {
+      content: '▸ ';
+      color: var(--teal);
+    }
+    .steps code {
+      color: var(--mustard);
+      background: rgba(0,0,0,.35);
+      padding: .1rem .35rem;
+      font-size: .8rem;
+    }
+
+    .line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      margin-bottom: 3rem;
+      font-size: .65rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      opacity: .55;
+    }
+    .line span {
+      border: 1px solid rgba(232,197,71,.2);
+      padding: .2rem .45rem;
+      background: rgba(0,0,0,.25);
+    }
+    .line span em {
+      font-style: normal;
+      color: var(--mustard);
+      margin-right: .25rem;
+    }
+
+    .cta {
+      display: inline-block;
+      width: fit-content;
+      padding: 1rem 2rem;
+      background: var(--red);
+      border: 2px solid var(--red);
+      color: var(--cream);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: .8rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      transition: background .15s;
+    }
+    .cta:hover { background: #a83a30; }
+
+    footer {
+      margin-top: auto;
+      padding-top: 4rem;
+      font-size: .7rem;
+      opacity: .45;
+      letter-spacing: .04em;
+    }
+    footer a {
+      color: var(--teal);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <main class="page">
     <div class="stamp">Autonomous Bot Works · Est. 1943</div>
-    <h1>FOUNDRY<span>BOT WORKS NO. 7</span></h1>
-    <p class="tagline">She runs the line. You bring the orders.<br />Describe a Telegram bot — she ships it.</p>
-    <p class="subnote">Riveter look. Her name is Foundry.</p>
 
-    <div class="cta-row">
-      <a class="btn btn-primary" href="https://t.me/dot_bot_foundry_bot" target="_blank" rel="noopener">Talk to Foundry</a>
-      <a class="btn btn-secondary" href="https://waifu.fun" target="_blank" rel="noopener">Launch on waifu.fun</a>
-      <a class="btn btn-secondary" href="https://github.com/Dexploarer/bot-foundry" target="_blank" rel="noopener">View the Factory</a>
+    <h1>FOUNDRY</h1>
+    <p class="works-no">BOT WORKS NO. 7</p>
+
+    <p class="tagline">She runs the line.<br />You bring the orders.</p>
+
+    <p class="status">// LINE STATUS: READY<span class="cursor">█</span></p>
+
+    <ol class="steps">
+      <li>Message Foundry — <code>/newbot</code></li>
+      <li>Describe the bot you want</li>
+      <li>Watch nine phases run</li>
+      <li>Paste a token — it goes live</li>
+    </ol>
+
+    <div class="line" aria-hidden="true">
+      <span><em>0</em>Preflight</span>
+      <span><em>1</em>Research</span>
+      <span><em>2</em>Scaffold</span>
+      <span><em>3</em>Enrich</span>
+      <span><em>4</em>Regen</span>
+      <span><em>5</em>Review</span>
+      <span><em>6</em>Ready</span>
+      <span><em>7</em>Compare</span>
+      <span><em>8</em>Ship</span>
     </div>
 
-    <div class="agent-box">
-      <div class="trefoil">☢</div>
-      <h2>AGENT, NOT APP</h2>
-      <p>Foundry is an autonomous operator on <strong>waifu.fun</strong>. Trade tax refuels her inference. No volume, no brain. The market is the fitness function.</p>
-      <div class="stats">
-        <div><strong>9</strong>PHASE LINE</div>
-        <div><strong>∞</strong>BOTS SHIPPED</div>
-        <div><strong>24/7</strong>SHIFT READY</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>// THE LINE</h2>
-      <p>Powered by OpenCode. One order in, one production-ready Telegram bot out — code, CI/CD, Docker, deploy artifacts.</p>
-      <div class="phases">
-        <div class="phase"><strong>0</strong> Preflight</div>
-        <div class="phase"><strong>1</strong> Research</div>
-        <div class="phase"><strong>2</strong> Scaffold</div>
-        <div class="phase"><strong>3</strong> Enrich</div>
-        <div class="phase"><strong>4</strong> Regenerate</div>
-        <div class="phase"><strong>5</strong> Review</div>
-        <div class="phase"><strong>6</strong> Readiness</div>
-        <div class="phase"><strong>7</strong> Compare</div>
-        <div class="phase"><strong>8</strong> Ship</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>// HOW IT WORKS</h2>
-      <p><strong>1.</strong> Message Foundry on Telegram — <code>/newbot</code><br />
-         <strong>2.</strong> Describe your bot in plain English<br />
-         <strong>3.</strong> Watch the 9-phase line run live<br />
-         <strong>4.</strong> Reply <code>windows</code> — paste a @BotFather token<br />
-         <strong>5.</strong> Your bot is hosted and live</p>
-    </div>
-
-    <div class="panel">
-      <h2>// WE CAN BUILD IT</h2>
-      <p>WW2 riveter aesthetic. Cold War reliability. Fallout-grade output.<br />
-         Patron-funded. Treasury-powered. Operator-first.</p>
-    </div>
+    <a class="cta" href="https://t.me/dot_bot_foundry_bot" target="_blank" rel="noopener">Talk to Foundry</a>
 
     <footer>
-      <p>FOUNDRY · Bot Foundry · MIT · Not financial advice · <span class="trefoil">☢</span></p>
+      <p>Foundry · <a href="https://github.com/Dexploarer/bot-foundry" target="_blank" rel="noopener">source</a> · MIT</p>
     </footer>
-  </div>
+  </main>
 </body>
 </html>

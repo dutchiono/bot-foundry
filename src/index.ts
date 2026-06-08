@@ -17,8 +17,8 @@ const OPENCODE_SERVER_URL = process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1
 const OPENCODE_SERVER_PASSWORD = process.env.OPENCODE_SERVER_PASSWORD || ''
 
 console.log(`╔══════════════════════════════════════════╗`)
-console.log(`║        🤖 Bot Foundry v0.2              ║`)
-console.log(`║   Bot factory — Telegram + Discord       ║`)
+console.log(`║   FOUNDRY — Bot Works No. 7              ║`)
+console.log(`║   Telegram + Discord                     ║`)
 console.log(`╠══════════════════════════════════════════╣`)
 console.log(`║  OpenCode: ${OPENCODE_SERVER_URL.padEnd(27)}║`)
 console.log(`║  Telegram: ${(BOT_TOKEN ? 'on' : 'off').padEnd(27)}║`)

@@ -1,12 +1,10 @@
-# Bot Foundry 🤖
+# Foundry — Bot Works No. 7
 
-**A Telegram bot that builds other Telegram bots — powered by [OpenCode](https://opencode.ai).**
+**She runs the line. You bring the orders.**
 
-Describe a bot in plain English and Bot Foundry runs a 9-phase pipeline (Preflight → Research → Scaffold → Enrich → Regenerate → Review → Agent Readiness → Comparative → Ship) to produce a production-ready Telegram bot with full CI/CD.
+Foundry is a Telegram (+ Discord) operator that fabricates other Telegram bots via a nine-phase pipeline, powered by [OpenCode](https://opencode.ai).
 
-**Pipeline troubleshooting & architecture:** [docs/orchestrator-fixes.md](docs/orchestrator-fixes.md)
-
-**Foundry agent launch (waifu.fun):** [docs/foundry-brand.md](docs/foundry-brand.md) · [website](website/index.html) · [imagery brief](docs/foundry-imagery-brief.md)
+**Site:** [foundry.bushleague.xyz](https://foundry.bushleague.xyz) · **Brand:** [docs/foundry-brand.md](docs/foundry-brand.md) · **Pipeline notes:** [docs/orchestrator-fixes.md](docs/orchestrator-fixes.md)
 
 ## Quick Start
 

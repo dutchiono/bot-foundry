@@ -22,22 +22,16 @@ export function createTelegramBot(
   bot.start(async (ctx) => {
     const name = escapeMarkdown(ctx.from?.first_name || 'friend')
     await ctx.reply(
-      `👋 Welcome to *Bot Foundry*, ${name}!
+      `*FOUNDRY* — Bot Works No. 7
 
-I'm a bot factory that builds Telegram bots — powered by OpenCode.
+${name}, you bring the orders. She runs the line.
 
-*Commands:*
-/newbot — Create a new Telegram bot
-/deploy — Deploy your finished bot
-/stopbot — Stop a hosted bot on this machine
-/status — Check pipeline progress
-/link — Link Telegram + Discord accounts
-/opencode — OpenCode server status
-/help — Show this message
-
-*Cross-platform:* run /link here, then /link CODE on Discord to share progress.
-
-Let's build something! 🚀`,
+/newbot — describe a bot
+/deploy — ship it
+/status — line progress
+/stopbot — stop local host
+/link — tie Discord session
+/help — commands`,
       { parse_mode: 'Markdown' },
     )
   })
@@ -52,26 +46,17 @@ Let's build something! 🚀`,
   bot.help(async (ctx) => {
     const eliza = isElizaCloudEnabled() ? '\n🧠 Eliza Cloud memory: connected' : ''
     await ctx.reply(
-      `*Bot Foundry Help*
+      `*Foundry — the line*
 
-/newbot — Start creating a new Telegram bot
-/deploy — Deploy your finished bot to production
-/stopbot — Stop locally hosted child bots
-/status — Check current pipeline or bot status
-/link — Share session with Discord
-/opencode — View OpenCode server connection info
-/help — This message${eliza}
+/newbot — new order
+/deploy — deploy menu
+/status — where the run is
+/stopbot — kill local child bot
+/link — share session with Discord
+/opencode — server check
+/help — this${eliza}
 
-*Phase Pipeline:*
-0️⃣ Preflight — Validate your bot spec
-1️⃣ Research — Analyze existing bots & market
-2️⃣ Scaffold — Generate the bot code
-3️⃣ Enrich — Identify improvements
-4️⃣ Regenerate — Apply improvements
-5️⃣ Review — Lint, typecheck, test
-6️⃣ Agent Readiness — Score for AI maintainability
-7️⃣ Comparative — Compare with alternatives
-8️⃣ Ship — Generate deployment artifacts`,
+*Phases:* 0 preflight → 8 ship`,
       { parse_mode: 'Markdown' },
     )
   })

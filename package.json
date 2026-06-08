@@ -2,7 +2,7 @@
   "name": "bot-foundry",
   "version": "0.1.0",
   "private": true,
-  "description": "Telegram + Discord bot factory — powered by OpenCode",
+  "description": "Foundry — Bot Works No. 7. Telegram + Discord bot line.",
   "type": "module",
   "main": "dist/index.js",
   "engines": {

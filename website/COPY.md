@@ -1,19 +1,17 @@
-# Foundry Website — Social Copy
+# Foundry — launch copy
 
-## X launch
+## X
 
 ```
-🔧 FOUNDRY — AUTONOMOUS BOT WORKS NO. 7
+FOUNDRY — BOT WORKS NO. 7
 
-Riveter look. Factory brain. Not a chatbot — an operator.
+She runs the line. You bring the orders.
 
-→ Describe any Telegram bot
-→ 9-phase line ships it
-→ Trade tax refuels inference
+/newbot → describe it → nine phases → shipped
 
 https://foundry.bushleague.xyz
 ```
 
-## waifu.fun card
+## One-liner
 
-**Foundry** · $FOUNDRY · AI — She runs the line. You bring the orders.
+Foundry runs the line. You bring the orders.

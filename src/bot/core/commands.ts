@@ -21,19 +21,13 @@ export async function runNewBotCommand(messenger: FoundryMessenger): Promise<voi
   userSession.phase = 0
 
   await messenger.reply(
-    `🧠 *Bot Foundry* — Let's build a Telegram bot!
+    `*New order.*
 
-Tell me about the bot you want to create. Describe:
+Describe the bot — what it does, key features, any APIs, TypeScript or Python.
 
-1. *What it does* — its purpose in one sentence
-2. *Key features* — what users can do with it
-3. *External APIs* — any services it needs to talk to (optional)
-4. *Language preference* — TypeScript (default) or Python
+Example: _"Price alert bot. Lookup, alerts. CoinGecko. TypeScript."_
 
-Example:
-_"A bot that tracks cryptocurrency prices and alerts me when BTC moves more than 5%. Features: price lookup, price alerts, portfolio tracking. APIs: CoinGecko, Binance. TypeScript."_
-
-Send me your description and I'll start building!`,
+Send it when ready.`,
   )
 }
 
