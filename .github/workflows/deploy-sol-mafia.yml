@@ -1,7 +1,8 @@
 # Pulls the already-built Sol Mafia image from GHCR and runs it on the server,
-# reusing this repo's existing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets.
-# The `sol-mafia` GHCR package must be Public (or the server `docker login`'d to
-# ghcr). Run from: Actions -> Deploy Sol Mafia -> Run workflow.
+# reusing this repo's existing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets
+# (stored under the `production` environment). The `sol-mafia` GHCR package must
+# be Public (or the server `docker login`'d to ghcr).
+# Run from: Actions -> Deploy Sol Mafia -> Run workflow.
 name: Deploy Sol Mafia
 on:
   workflow_dispatch:
@@ -15,6 +16,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Deploy
         env:
