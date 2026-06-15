@@ -1,0 +1,38 @@
+# Pulls the already-built Sol Mafia image from GHCR and runs it on the server,
+# reusing this repo's existing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets.
+# The `sol-mafia` GHCR package must be Public (or the server `docker login`'d to
+# ghcr). Run from: Actions -> Deploy Sol Mafia -> Run workflow.
+name: Deploy Sol Mafia
+on:
+  workflow_dispatch:
+    inputs:
+      port:
+        description: "Host port"
+        default: "4100"
+      tag:
+        description: "Image tag"
+        default: "edge"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          PORT: ${{ inputs.port }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s' "$SSH_KEY" > ~/.ssh/k && chmod 600 ~/.ssh/k
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/k "$SSH_USER@$SSH_HOST" PORT="$PORT" TAG="$TAG" 'bash -s' <<'EOF'
+          set -e
+          docker pull ghcr.io/dutchiono/sol-mafia:${TAG}
+          docker rm -f sol-mafia 2>/dev/null || true
+          docker run -d --name sol-mafia --restart unless-stopped \
+            -p 127.0.0.1:${PORT}:3000 -e NODE_ENV=production \
+            ghcr.io/dutchiono/sol-mafia:${TAG}
+          sleep 4
+          curl -s -o /dev/null -w "sol-mafia http: %{http_code}\n" http://127.0.0.1:${PORT} || true
+          EOF
